@@ -1,0 +1,14 @@
+{
+    "name": "zaccess-raspberry-client",
+    "version": "1.0.0",
+    "description": "Zaccess IoT Client for Raspberry Pi 4 with Relay Modules",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "socket.io-client": "^4.8.1",
+        "onoff": "^6.0.3"
+    }
+}
