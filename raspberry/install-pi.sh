@@ -34,32 +34,36 @@ if [[ "$(uname)" != "Linux" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 2. Verificar Node.js
+# 2. Verificar Node.js (instalar se não existir)
 # -----------------------------------------------------------------------------
+install_nodejs() {
+    info "Instalando Node.js 20 (NodeSource)..."
+    apt-get update -qq
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y nodejs
+    if ! command -v node &>/dev/null; then
+        error "Instalação do Node.js falhou. Instale manualmente e rode o script de novo."
+    fi
+    info "Node.js instalado: $(node -v)"
+}
+
 if ! command -v node &>/dev/null; then
-    error "Node.js não encontrado. Instale com: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"
+    if [[ $EUID -eq 0 ]]; then
+        install_nodejs
+    else
+        warn "Node.js não encontrado. O script precisa de sudo para instalá-lo."
+        exec sudo bash "$0" "$INSTALL_DIR"
+    fi
 fi
 
 NODE_VERSION=$(node -v)
-info "Node.js encontrado: $NODE_VERSION"
+info "Node.js: $NODE_VERSION"
 
 # -----------------------------------------------------------------------------
-# 3. Criar .env se não existir (só pergunta se não for execução com sudo)
+# 3. Criar diretório de dados (SQLite)
 # -----------------------------------------------------------------------------
-if [[ ! -f "$INSTALL_DIR/.env" ]]; then
-    info "Criando .env a partir de .env.example..."
-    cp "$INSTALL_DIR/.env.example" "$INSTALL_DIR/.env"
-    if [[ $EUID -ne 0 ]]; then
-        warn "Edite o arquivo .env com a URL do servidor, serial e token:"
-        echo "   nano $INSTALL_DIR/.env"
-        echo ""
-        read -p "Pressione Enter após editar o .env (ou Ctrl+C para sair e editar depois)."
-    else
-        warn "Edite o .env antes de iniciar o serviço: nano $INSTALL_DIR/.env"
-    fi
-else
-    info "Arquivo .env já existe."
-fi
+mkdir -p "$INSTALL_DIR/data"
+info "Diretório data/ criado (configuração em SQLite)."
 
 # -----------------------------------------------------------------------------
 # 4. Instalar dependências npm
@@ -99,7 +103,6 @@ Wants=network-online.target
 Type=simple
 User=$USER_RUN
 WorkingDirectory=$INSTALL_DIR
-EnvironmentFile=$INSTALL_DIR/.env
 ExecStart=$NODE_PATH $INSTALL_DIR/src/index.js
 Restart=always
 RestartSec=5
@@ -116,6 +119,10 @@ systemctl enable "$SERVICE_NAME.service"
 systemctl start "$SERVICE_NAME.service"
 
 info "Serviço instalado e iniciado."
+echo ""
+echo "Configure o dispositivo pelo painel web:"
+echo "  http://IP_DO_RASPBERRY:5080"
+echo "  (Configuração > URL do servidor, Serial, Token > Salvar > Reiniciar serviço)"
 echo ""
 echo "Comandos úteis:"
 echo "  Status:    sudo systemctl status $SERVICE_NAME"

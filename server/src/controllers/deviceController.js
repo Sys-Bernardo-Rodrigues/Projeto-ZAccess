@@ -1,6 +1,6 @@
 const Device = require('../models/Device');
 const ActivityLog = require('../models/ActivityLog');
-const { apiResponse, generateSerialNumber } = require('../utils/helpers');
+const { apiResponse, generateSerialNumber, generateAuthToken } = require('../utils/helpers');
 const { getRedisClient } = require('../config/redis');
 const logger = require('../utils/logger');
 
@@ -28,6 +28,7 @@ exports.getDevices = async (req, res, next) => {
 exports.getDevice = async (req, res, next) => {
     try {
         const device = await Device.findById(req.params.id)
+            .select('+authToken')
             .populate('locationId', 'name address')
             .populate('relays');
 
@@ -54,6 +55,7 @@ exports.createDevice = async (req, res, next) => {
     try {
         const { name, locationId, metadata, ipAddress } = req.body;
         const serialNumber = req.body.serialNumber || generateSerialNumber();
+        const authToken = generateAuthToken();
 
         const device = await Device.create({
             name,
@@ -61,6 +63,7 @@ exports.createDevice = async (req, res, next) => {
             locationId,
             metadata,
             ipAddress,
+            authToken,
         });
 
         await ActivityLog.create({
@@ -71,7 +74,8 @@ exports.createDevice = async (req, res, next) => {
         });
 
         logger.info(`Device registered: ${name} (${serialNumber})`);
-        apiResponse(res, 201, { device }, 'Dispositivo registrado com sucesso.');
+        const deviceObj = device.toObject();
+        apiResponse(res, 201, { device: deviceObj, authToken }, 'Dispositivo registrado. Copie o token para o .env do Raspberry.');
     } catch (error) {
         next(error);
     }
@@ -124,6 +128,31 @@ exports.deleteDevice = async (req, res, next) => {
         });
 
         apiResponse(res, 200, null, 'Dispositivo removido com sucesso.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/devices/:id/regenerate-token
+exports.regenerateAuthToken = async (req, res, next) => {
+    try {
+        const device = await Device.findById(req.params.id).select('+authToken');
+        if (!device) {
+            return apiResponse(res, 404, null, 'Dispositivo não encontrado.');
+        }
+        const authToken = generateAuthToken();
+        device.authToken = authToken;
+        await device.save();
+
+        await ActivityLog.create({
+            action: 'device_updated',
+            description: `Token do dispositivo ${device.name} regenerado`,
+            deviceId: device._id,
+            userId: req.user._id,
+        });
+
+        logger.info(`Auth token regenerated for device: ${device.name}`);
+        apiResponse(res, 200, { authToken }, 'Token regenerado. Atualize o .env no Raspberry.');
     } catch (error) {
         next(error);
     }

@@ -3,13 +3,14 @@
  * Gerencia a leitura de pinos GPIO configurados como entrada.
  */
 
+const logger = require('./utils/logger');
+
 let Gpio;
 try {
-    // Tenta carregar a biblioteca onoff (apenas funciona no Raspberry Pi)
     Gpio = require('onoff').Gpio;
-    console.log('✅ Biblioteca onoff carregada para Inputs');
+    logger.info('Biblioteca onoff carregada para Inputs');
 } catch (err) {
-    console.log('⚠️  Biblioteca onoff NÃO encontrada. Rodando modo SIMULAÇÃO para Inputs.');
+    logger.info('Biblioteca onoff não encontrada. Modo simulação para Inputs.');
     Gpio = null;
 }
 
@@ -31,17 +32,13 @@ function initInput(inputConfig) {
                 activeLow: activeLow,
             });
 
-            // Escutar mudanças de estado
             sensor.watch((err, value) => {
                 if (err) {
-                    console.error(`❌ Erro no sensor ${name}:`, err);
+                    logger.erro(`Sensor ${name} (GPIO ${gpioPin}): ${err.message}`);
                     return;
                 }
-
-                // value = 1 (ativo se activeLow: false, ou inativo se activeLow: true?)
-                // A biblioteca onoff inverte o valor automaticamente se activeLow estiver setado
                 const state = value === 1 ? 'active' : 'inactive';
-                console.log(`🔌 Sensor [${name}] mudou para: ${state}`);
+                logger.sensor(`Sensor "${name}" (GPIO ${gpioPin}) -> ${state}`);
 
                 if (onInputChange) {
                     onInputChange(id, state);
@@ -49,8 +46,9 @@ function initInput(inputConfig) {
             });
 
             inputs.set(id, sensor);
+            logger.sensor(`Sensor "${name}" (GPIO ${gpioPin}) inicializado`);
         } else {
-            console.log(`📡 [SIMULAÇÃO] Sensor ${name} iniciado no GPIO ${gpioPin}`);
+            logger.sensor(`Sensor "${name}" (GPIO ${gpioPin}) - modo simulação`);
 
             // Simular mudança aleatória para teste (apenas exemplo)
             /*
@@ -61,7 +59,7 @@ function initInput(inputConfig) {
             */
         }
     } catch (err) {
-        console.error(`❌ Falha ao inicializar sensor ${name} no GPIO ${gpioPin}:`, err.message);
+        logger.erro(`Falha ao inicializar sensor "${name}" (GPIO ${gpioPin}): ${err.message}`);
     }
 }
 
@@ -81,16 +79,22 @@ function initAll(configs) {
 
     if (!configs || configs.length === 0) return;
 
-    console.log(`🔧 Inicializando ${configs.length} sensores...`);
+    logger.config(`Inicializando ${configs.length} sensores...`);
     configs.forEach(initInput);
 }
 
 /**
- * Libera os pinos GPIO
+ * Libera os pinos GPIO de forma segura
  */
 function cleanup() {
     inputs.forEach((sensor) => {
-        if (sensor.unexport) sensor.unexport();
+        try {
+            if (sensor && typeof sensor.unexport === 'function') {
+                sensor.unexport();
+            }
+        } catch (err) {
+            logger.erro(`Liberar sensor: ${err.message}`);
+        }
     });
     inputs.clear();
 }
@@ -100,7 +104,7 @@ function cleanup() {
  */
 function simulateTrigger(id, state) {
     if (!Gpio && onInputChange) {
-        console.log(`🧪 [SIMULAÇÃO] Disparando sensor ${id} -> ${state}`);
+        logger.sensor(`Simulação: sensor ${id} -> ${state}`);
         onInputChange(id, state);
     }
 }

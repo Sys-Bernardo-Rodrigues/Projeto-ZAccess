@@ -9,6 +9,11 @@ const generateSerialNumber = (prefix = 'RPi4') => {
 };
 
 /**
+ * Gera um token de autenticação para o dispositivo (usar no .env do Raspberry)
+ */
+const generateAuthToken = () => crypto.randomBytes(32).toString('hex');
+
+/**
  * Sanitiza um objeto removendo campos undefined
  */
 const sanitizeObject = (obj) => {
@@ -31,6 +36,7 @@ const apiResponse = (res, statusCode, data, message = '') => {
 
 module.exports = {
     generateSerialNumber,
+    generateAuthToken,
     sanitizeObject,
     apiResponse,
 };

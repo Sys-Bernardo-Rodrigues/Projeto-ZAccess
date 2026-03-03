@@ -13,42 +13,72 @@ try {
     Gpio = null;
 }
 
+const logger = require('./utils/logger');
+
 class RelayController {
     constructor(channelToGpio) {
         this.channelToGpio = channelToGpio;
         this.relays = {};
         this.states = {};
+        this.gpioByChannel = {};
         this.simulated = !Gpio;
+    }
+
+    /**
+     * Retorna o número do GPIO para um canal (para logs)
+     */
+    getGpioForChannel(channel) {
+        return this.gpioByChannel[channel] ?? this.channelToGpio[channel] ?? null;
     }
 
     /**
      * Inicializa um relé em um canal/pino específico
      */
     initRelay(channel, gpioPin) {
+        this.gpioByChannel[channel] = gpioPin;
+
         if (this.simulated) {
-            console.log(`[SIM] Relé inicializado: Canal ${channel} -> GPIO ${gpioPin}`);
-            this.states[channel] = 0; // 0 = closed/off
+            logger.gpio(`Relé inicializado: Canal ${channel} -> GPIO ${gpioPin} (simulado)`);
+            this.states[channel] = 0;
             return;
         }
 
         try {
             this.relays[channel] = new Gpio(gpioPin, 'out');
-            this.relays[channel].writeSync(0); // Start with relay off
+            this.relays[channel].writeSync(0);
             this.states[channel] = 0;
-            console.log(`✅ Relé inicializado: Canal ${channel} -> GPIO ${gpioPin}`);
+            logger.gpio(`Relé inicializado: Canal ${channel} -> GPIO ${gpioPin}`);
         } catch (err) {
-            console.error(`❌ Erro ao inicializar relé canal ${channel}:`, err.message);
+            logger.erro(`Relé canal ${channel} (GPIO ${gpioPin}): ${err.message}`);
         }
     }
 
     /**
-     * Inicializa todos os relés baseado no mapeamento de config
+     * Inicializa todos os relés baseado no mapeamento de config (fallback se servidor não enviar config)
      */
     initAll() {
         for (const [channel, gpioPin] of Object.entries(this.channelToGpio)) {
             this.initRelay(parseInt(channel), gpioPin);
         }
-        console.log(`📡 ${Object.keys(this.channelToGpio).length} relés inicializados`);
+        logger.config(`${Object.keys(this.channelToGpio).length} relés inicializados (config local)`);
+    }
+
+    /**
+     * Inicializa apenas os relés definidos pelo servidor (limpa os atuais antes)
+     */
+    initFromServerConfig(relays) {
+        this.cleanup();
+        if (!relays || relays.length === 0) return;
+
+        relays.forEach((relay) => {
+            const gpioPin = relay.gpioPin != null ? relay.gpioPin : this.channelToGpio[relay.channel];
+            if (gpioPin == null) return;
+            this.initRelay(relay.channel, gpioPin);
+            if (relay.state === 'open') {
+                this.setRelay(relay.channel, 'open');
+            }
+        });
+        logger.config(`${relays.length} relés configurados pelo servidor`);
     }
 
     /**
@@ -56,26 +86,27 @@ class RelayController {
      */
     setRelay(channel, state) {
         const value = state === 'open' ? 1 : 0;
+        const gpio = this.getGpioForChannel(channel);
 
         if (this.simulated) {
-            console.log(`[SIM] Relé canal ${channel}: ${state} (${value})`);
+            logger.gpio(`Relé canal ${channel} (GPIO ${gpio ?? '?'}): ${state} (simulado)`);
             this.states[channel] = value;
             return true;
         }
 
         const relay = this.relays[channel];
         if (!relay) {
-            console.error(`Relé canal ${channel} não inicializado`);
+            logger.erro(`Relé canal ${channel} (GPIO ${gpio ?? '?'}) não inicializado`);
             return false;
         }
 
         try {
             relay.writeSync(value);
             this.states[channel] = value;
-            console.log(`⚡ Relé canal ${channel}: ${state}`);
+            logger.gpio(`GPIO ${gpio} (canal ${channel}) acionado: ${state}`);
             return true;
         } catch (err) {
-            console.error(`Erro ao acionar relé canal ${channel}:`, err.message);
+            logger.erro(`Relé canal ${channel} (GPIO ${gpio}): ${err.message}`);
             return false;
         }
     }
@@ -90,13 +121,16 @@ class RelayController {
     }
 
     /**
-     * Modo pulso: ativa por X ms e depois desativa
+     * Modo pulso: ativa por X ms e depois desativa (mínimo 100 ms)
      */
     pulseRelay(channel, durationMs = 1000) {
+        const duration = Math.max(100, Number(durationMs) || 1000);
+        const gpio = this.getGpioForChannel(channel);
+        logger.gpio(`GPIO ${gpio} (canal ${channel}): pulso ${duration} ms`);
         this.setRelay(channel, 'open');
         setTimeout(() => {
             this.setRelay(channel, 'closed');
-        }, durationMs);
+        }, duration);
         return true;
     }
 
@@ -119,23 +153,27 @@ class RelayController {
     }
 
     /**
-     * Libera os recursos GPIO
+     * Libera os recursos GPIO e limpa estado interno
      */
     cleanup() {
         if (this.simulated) {
-            console.log('[SIM] Cleanup: relés liberados');
+            this.relays = {};
+            this.states = {};
+            this.gpioByChannel = {};
             return;
         }
 
         for (const [channel, relay] of Object.entries(this.relays)) {
             try {
-                relay.writeSync(0); // Desligar antes de liberar
+                relay.writeSync(0);
                 relay.unexport();
-                console.log(`Relé canal ${channel} liberado`);
             } catch (err) {
-                console.error(`Erro ao liberar relé canal ${channel}:`, err.message);
+                logger.erro(`Liberar relé canal ${channel}: ${err.message}`);
             }
         }
+        this.relays = {};
+        this.states = {};
+        this.gpioByChannel = {};
     }
 }
 

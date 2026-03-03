@@ -14,6 +14,8 @@ import {
     X,
     Send,
     RefreshCw,
+    Copy,
+    Key,
 } from 'lucide-react';
 
 const TableSkeleton = () => (
@@ -53,6 +55,7 @@ export default function DevicesPage() {
         locationId: '',
         ipAddress: '',
     });
+    const [createdToken, setCreatedToken] = useState(null);
 
     const loadDevices = useCallback(async () => {
         try {
@@ -89,8 +92,38 @@ export default function DevicesPage() {
 
     const openCreateModal = () => {
         setEditingDevice(null);
+        setCreatedToken(null);
         setForm({ name: '', serialNumber: '', locationId: '', ipAddress: '' });
         setShowModal(true);
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        toast.success('Token copiado! Cole no .env do Raspberry.');
+    };
+
+    const copyDeviceToken = async (deviceId) => {
+        try {
+            const res = await api.get(`/devices/${deviceId}`);
+            const token = res.data?.data?.device?.authToken;
+            if (token) copyToClipboard(token);
+            else toast.error('Token não disponível.');
+        } catch (err) {
+            toast.error('Erro ao obter token');
+        }
+    };
+
+    const regenerateToken = async (deviceId) => {
+        try {
+            const res = await api.post(`/devices/${deviceId}/regenerate-token`);
+            const token = res.data?.data?.authToken;
+            if (token) {
+                copyToClipboard(token);
+                toast.success('Token regenerado e copiado. Atualize o .env no Raspberry.');
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Erro ao regenerar token');
+        }
     };
 
     const openEditModal = (device) => {
@@ -110,11 +143,16 @@ export default function DevicesPage() {
             if (editingDevice) {
                 await api.put(`/devices/${editingDevice._id}`, form);
                 toast.success('Dispositivo atualizado!');
+                setShowModal(false);
             } else {
-                await api.post('/devices', form);
-                toast.success('Dispositivo registrado!');
+                const res = await api.post('/devices', form);
+                const token = res.data?.data?.authToken;
+                if (token) setCreatedToken(token);
+                else {
+                    toast.success('Dispositivo registrado!');
+                    setShowModal(false);
+                }
             }
-            setShowModal(false);
             loadDevices();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Erro ao salvar dispositivo');
@@ -340,19 +378,57 @@ export default function DevicesPage() {
                                         onChange={handleChange}
                                     />
                                 </div>
+
+                                {createdToken && (
+                                    <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginTop: 8 }}>
+                                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <Key size={16} />
+                                            Token para o .env do Raspberry (copie agora)
+                                        </label>
+                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                            <code style={{ fontSize: 11, wordBreak: 'break-all', flex: 1, minWidth: 0 }}>{createdToken}</code>
+                                            <button type="button" className="btn btn-primary btn-sm" onClick={() => copyToClipboard(createdToken)}>
+                                                <Copy size={14} />
+                                                Copiar
+                                            </button>
+                                        </div>
+                                        <p style={{ fontSize: 11, opacity: 0.8, marginTop: 6 }}>ZACESS_AUTH_TOKEN=cole_aqui_no_.env</p>
+                                    </div>
+                                )}
+
+                                {editingDevice && (
+                                    <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginTop: 8 }}>
+                                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <Key size={16} />
+                                            Token do dispositivo (para .env no Raspberry)
+                                        </label>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyDeviceToken(editingDevice._id)}>
+                                                <Copy size={14} />
+                                                Copiar token
+                                            </button>
+                                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => regenerateToken(editingDevice._id)}>
+                                                <RefreshCw size={14} />
+                                                Regenerar token
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="modal-footer">
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() => setShowModal(false)}
+                                    onClick={() => { setShowModal(false); setCreatedToken(null); }}
                                 >
-                                    Cancelar
+                                    {createdToken ? 'Fechar' : 'Cancelar'}
                                 </button>
-                                <button type="submit" className="btn btn-primary">
-                                    <Send size={16} />
-                                    {editingDevice ? 'Atualizar' : 'Registrar'}
-                                </button>
+                                {!createdToken && (
+                                    <button type="submit" className="btn btn-primary">
+                                        <Send size={16} />
+                                        {editingDevice ? 'Atualizar' : 'Registrar'}
+                                    </button>
+                                )}
                             </div>
                         </form>
                     </div>

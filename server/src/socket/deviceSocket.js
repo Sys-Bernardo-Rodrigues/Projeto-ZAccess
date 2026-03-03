@@ -30,21 +30,29 @@ module.exports = (io) => {
         }
 
         try {
-            // Buscar dispositivo no banco
-            const device = await Device.findOne({ serialNumber, active: true });
+            // Buscar dispositivo no banco (incluir authToken para validação)
+            const device = await Device.findOne({ serialNumber, active: true }).select('+authToken');
             if (!device) {
                 logger.warn(`Device not found: ${serialNumber}`);
                 socket.emit('error', { message: 'Dispositivo não registrado' });
                 socket.disconnect();
                 return;
             }
+            if (device.authToken && device.authToken !== authToken) {
+                logger.warn(`Device auth failed: ${serialNumber}`);
+                socket.emit('error', { message: 'Token de autenticação inválido' });
+                socket.disconnect();
+                return;
+            }
 
-            // Atualizar status do dispositivo
-            device.status = 'online';
-            device.socketId = socket.id;
-            device.lastHeartbeat = new Date();
-            device.ipAddress = socket.handshake.address;
-            await device.save();
+            // Atualizar status do dispositivo (findByIdAndUpdate evita save() paralelo depois)
+            const now = new Date();
+            await Device.findByIdAndUpdate(device._id, {
+                status: 'online',
+                socketId: socket.id,
+                lastHeartbeat: now,
+                ipAddress: socket.handshake.address,
+            });
 
             // Cache no Redis
             const redis = getRedisClient();
@@ -112,8 +120,8 @@ module.exports = (io) => {
             }, HEARTBEAT_INTERVAL);
 
             socket.on('heartbeat', async (data) => {
-                device.lastHeartbeat = new Date();
-                await device.save();
+                const now = new Date();
+                await Device.findByIdAndUpdate(device._id, { lastHeartbeat: now });
 
                 await redis.set(
                     `device:status:${device._id}`,
@@ -217,16 +225,16 @@ module.exports = (io) => {
             // ---- Health Update ----
             socket.on('device:health-update', async (data) => {
                 try {
-                    device.health = {
+                    const health = {
                         ...data,
                         lastChecked: new Date()
                     };
-                    await device.save();
+                    await Device.findByIdAndUpdate(device._id, { health });
 
                     // Notificar dashboard para gráficos em tempo real
                     dashboardNsp.emit('device:health-change', {
                         deviceId: device._id,
-                        health: device.health
+                        health
                     });
                 } catch (err) {
                     logger.error('Health update error:', err);
@@ -238,9 +246,10 @@ module.exports = (io) => {
                 clearInterval(heartbeatTimer);
 
                 try {
-                    device.status = 'offline';
-                    device.socketId = null;
-                    await device.save();
+                    await Device.findByIdAndUpdate(device._id, {
+                        status: 'offline',
+                        socketId: null,
+                    });
 
                     await redis.del(`device:status:${device._id}`);
 

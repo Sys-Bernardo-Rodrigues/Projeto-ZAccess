@@ -1,90 +1,105 @@
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 const { io } = require('socket.io-client');
 const config = require('./config');
+const { loadConfig } = require('./config/load');
 const RelayController = require('./relayController');
 const inputController = require('./inputController');
+const logger = require('./utils/logger');
+const settings = require('./db/settings');
+const { startWebServer } = require('./web/server');
 const os = require('os');
 
 // ============================================
-// Inicializar Relay Controller
+// Configuração de conexão (SQLite → .env → env)
+// ============================================
+const connectionConfig = loadConfig();
+
+// ============================================
+// Relay Controller (será configurado pelo servidor em device:config)
 // ============================================
 const relayController = new RelayController(config.channelToGpio);
-relayController.initAll();
-
-// Configurar o callback de mudança de sensor
-inputController.setCallback((inputId, state) => {
-    socket.emit('input:state-update', { inputId, state });
-});
 
 // ============================================
 // Conectar ao Servidor Zaccess
 // ============================================
-console.log(`🔌 Conectando ao servidor: ${config.serverUrl}`);
-console.log(`📟 Serial: ${config.serialNumber}`);
+logger.info(`Iniciando cliente. Servidor: ${connectionConfig.serverUrl || '(não configurado)'} | Serial: ${connectionConfig.serialNumber}`);
 
-const socket = io(`${config.serverUrl}/devices`, {
+const socket = io(`${connectionConfig.serverUrl || 'http://localhost:3001'}/devices`, {
     auth: {
-        serialNumber: config.serialNumber,
-        authToken: config.authToken,
+        serialNumber: connectionConfig.serialNumber,
+        authToken: connectionConfig.authToken,
     },
     transports: ['websocket', 'polling'],
     reconnection: config.reconnect.enabled,
     reconnectionAttempts: config.reconnect.maxAttempts,
     reconnectionDelay: config.reconnect.delay,
+    reconnectionDelayMax: config.reconnect.delayMax || 60000,
+});
+
+// Só envia mudança de sensor quando estiver conectado
+inputController.setCallback((inputId, state) => {
+    if (socket.connected) {
+        socket.emit('input:state-update', { inputId, state });
+    }
 });
 
 // ============================================
-// Eventos de Conexão
+// Eventos de Conexão (logs em tempo real)
 // ============================================
 socket.on('connect', () => {
-    console.log('✅ Conectado ao servidor Zaccess!');
-    console.log(`   Socket ID: ${socket.id}`);
+    logger.conexao(`Conectado ao servidor. Socket ID: ${socket.id}`);
 });
 
 socket.on('disconnect', (reason) => {
-    console.log(`🔌 Desconectado: ${reason}`);
+    logger.conexao(`Desconectado: ${reason}`);
 });
 
 socket.on('connect_error', (err) => {
-    console.error(`❌ Erro de conexão: ${err.message}`);
+    logger.erro(`Conexão: ${err.message}`);
 });
 
 socket.on('reconnect_attempt', (attempt) => {
-    console.log(`🔄 Tentativa de reconexão #${attempt}...`);
+    if (attempt === 1 || attempt % 5 === 0) {
+        logger.conexao(`Reconectando... (tentativa ${attempt})`);
+    }
+});
+
+socket.on('reconnect', () => {
+    logger.conexao('Reconectado ao servidor.');
+});
+
+socket.on('reconnect_failed', () => {
+    logger.erro('Reconexão falhou após várias tentativas. O cliente continuará tentando.');
 });
 
 socket.on('error', (data) => {
-    console.error(`❌ Erro do servidor: ${data.message}`);
+    logger.erro(`Servidor: ${data.message || JSON.stringify(data)}`);
 });
 
 // ============================================
-// Receber Configuração do Servidor
+// Receber Configuração do Servidor (também na reconexão)
 // ============================================
 socket.on('device:config', (data) => {
-    console.log(`📋 Configuração recebida: ${data.name}`);
-    console.log(`   Relés configurados: ${data.relays.length}`);
+    const numRelays = (data.relays || []).length;
+    const numInputs = (data.inputs || []).length;
+    logger.config(`Configuração recebida: "${data.name}" | Relés: ${numRelays} | Sensores: ${numInputs}`);
 
-    // Inicializar relés conforme configuração do servidor
-    data.relays.forEach((relay) => {
-        relayController.initRelay(relay.channel, relay.gpioPin);
-        // Restaurar o estado salvo no servidor
-        if (relay.state === 'open') {
-            relayController.setRelay(relay.channel, 'open');
-        }
-    });
+    relayController.initFromServerConfig(data.relays || []);
 
-    // Inicializar sensores conforme configuração do servidor
-    if (data.inputs) {
-        console.log(`   Sensores configurados: ${data.inputs.length}`);
+    if (data.inputs && data.inputs.length > 0) {
         inputController.initAll(data.inputs);
     }
 });
 
 // ============================================
-// Receber Comando de Toggle
+// Receber Comando de Toggle (log em tempo real)
 // ============================================
 socket.on('relay:toggle', (data) => {
-    console.log(`⚡ Comando de toggle: Canal ${data.channel} -> ${data.targetState}`);
+    const gpio = relayController.getGpioForChannel(data.channel);
+    const gpioStr = gpio != null ? `GPIO ${gpio}` : 'canal ' + data.channel;
+    logger.servidor(`Comando do servidor: acionar ${gpioStr} -> ${data.targetState} (modo: ${data.mode || 'toggle'})${data.mode === 'pulse' ? `, duração ${data.pulseDuration || 1000} ms` : ''}`);
 
     let success = false;
 
@@ -102,28 +117,27 @@ socket.on('relay:toggle', (data) => {
             success = relayController.setRelay(data.channel, data.targetState);
     }
 
-    // Enviar confirmação de estado para o servidor
     if (success) {
         const currentState = relayController.getState(data.channel);
         socket.emit('relay:state-update', {
             relayId: data.relayId,
             state: data.mode === 'pulse' ? 'closed' : currentState,
         });
-        console.log(`   ✅ Relé acionado com sucesso`);
+        logger.relay(`Confirmação enviada ao servidor: estado ${currentState}`);
     } else {
-        console.log(`   ❌ Falha ao acionar relé`);
+        logger.erro(`Falha ao acionar relé canal ${data.channel} (${gpioStr})`);
     }
 });
 
 // ============================================
-// Receber Comandos Genéricos
+// Receber Comandos Genéricos (log em tempo real)
 // ============================================
 socket.on('device:command', (data) => {
-    console.log(`📩 Comando recebido: ${data.command}`);
+    logger.comando(`Comando recebido do servidor: ${data.command}`);
 
     switch (data.command) {
         case 'reboot':
-            console.log('🔄 Reiniciando dispositivo conforme comando do servidor...');
+            logger.comando('Reiniciando dispositivo conforme comando do servidor...');
             socket.emit('command:response', {
                 command: data.command,
                 status: 'executing',
@@ -136,13 +150,14 @@ socket.on('device:command', (data) => {
                     const { exec } = require('child_process');
                     exec('sudo reboot');
                 } else {
-                    console.log('⚠️ Simulação de Reboot: (sudo reboot) - Sistema operacional não Linux.');
-                    process.exit(1); // Simula a queda da conexão
+                    logger.info('Simulação de reboot (não é Linux). Encerrando processo.');
+                    process.exit(1);
                 }
             }, 2000);
             break;
 
         case 'status':
+            logger.comando('Enviando status (relés, uptime, memória, CPU) ao servidor.');
             socket.emit('command:response', {
                 command: data.command,
                 status: 'success',
@@ -159,6 +174,7 @@ socket.on('device:command', (data) => {
             break;
 
         case 'get-states':
+            logger.comando('Enviando estados dos relés ao servidor.');
             socket.emit('command:response', {
                 command: data.command,
                 status: 'success',
@@ -167,6 +183,7 @@ socket.on('device:command', (data) => {
             break;
 
         default:
+            logger.comando(`Comando desconhecido: ${data.command}`);
             socket.emit('command:response', {
                 command: data.command,
                 status: 'unknown',
@@ -178,11 +195,18 @@ socket.on('device:command', (data) => {
 // ============================================
 // Heartbeat & Health Reporting
 // ============================================
-const getCpuTemp = () => {
-    // Em produção: usar fs.readFileSync('/sys/class/thermal/thermal_zone0/temp')
-    // Simulação para desenvolvimento
-    return 45 + Math.random() * 15;
-};
+function getCpuTemp() {
+    if (process.platform === 'linux') {
+        try {
+            const p = '/sys/class/thermal/thermal_zone0/temp';
+            if (fs.existsSync(p)) {
+                const raw = fs.readFileSync(p, 'utf8').trim();
+                return Math.round(parseInt(raw, 10) / 1000); // millidegrees -> °C
+            }
+        } catch (e) { /* ignore */ }
+    }
+    return 0;
+}
 
 setInterval(() => {
     if (socket.connected) {
@@ -217,7 +241,7 @@ setInterval(() => {
 // Graceful Shutdown
 // ============================================
 const shutdown = () => {
-    console.log('\n🛑 Encerrando...');
+    logger.info('Encerrando cliente (SIGINT/SIGTERM)...');
     relayController.cleanup();
     inputController.cleanup();
     socket.disconnect();
@@ -227,5 +251,16 @@ const shutdown = () => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-console.log('🚀 Zaccess Raspberry Pi Client iniciado');
-console.log('   Pressione Ctrl+C para encerrar');
+// Painel web local (porta 5080) — config via SQLite
+function getStatus() {
+    return {
+        connected: socket.connected,
+        relayStates: relayController.getAllStates(),
+        uptime: os.uptime(),
+        memory: { total: os.totalmem(), free: os.freemem() },
+        cpuTemp: getCpuTemp(),
+    };
+}
+startWebServer(logger, getStatus, settings);
+
+logger.info('Zaccess Raspberry Pi Client iniciado. Pressione Ctrl+C para encerrar.');
