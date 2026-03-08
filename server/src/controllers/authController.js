@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const LocationUser = require('../models/LocationUser');
+const Location = require('../models/Location');
 const ActivityLog = require('../models/ActivityLog');
 const config = require('../config/env');
 const { apiResponse } = require('../utils/helpers');
@@ -9,6 +11,20 @@ const signToken = (id) => {
     return jwt.sign({ id }, config.jwt.secret, {
         expiresIn: config.jwt.expiresIn,
     });
+};
+
+/** Token para usuários do local (app): id + locationId + role + type */
+const signLocationUserToken = (locationUser) => {
+    return jwt.sign(
+        {
+            id: locationUser._id,
+            locationId: locationUser.locationId.toString(),
+            role: locationUser.role,
+            type: 'location_user',
+        },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn }
+    );
 };
 
 // POST /api/auth/register
@@ -72,6 +88,41 @@ exports.getMe = async (req, res, next) => {
     try {
         const user = await User.findById(req.user._id);
         apiResponse(res, 200, { user });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/auth/location-user/login (app moradores/síndicos)
+exports.locationUserLogin = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return apiResponse(res, 400, null, 'E-mail e senha são obrigatórios.');
+        }
+
+        const locationUser = await LocationUser.findOne({
+            email: email.toLowerCase().trim(),
+            active: true,
+        })
+            .select('+password')
+            .populate('locationId', 'name address');
+
+        if (!locationUser || !(await locationUser.comparePassword(password))) {
+            return apiResponse(res, 401, null, 'E-mail ou senha incorretos.');
+        }
+
+        const token = signLocationUserToken(locationUser);
+        const userJson = locationUser.toJSON ? locationUser.toJSON() : locationUser;
+        const location = locationUser.locationId;
+
+        apiResponse(res, 200, {
+            user: userJson,
+            location: location ? { _id: location._id, name: location.name, address: location.address } : null,
+            token,
+            role: locationUser.role,
+        }, 'Login realizado com sucesso.');
     } catch (error) {
         next(error);
     }

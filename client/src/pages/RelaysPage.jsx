@@ -395,17 +395,17 @@ export default function RelaysPage() {
                                     </div>
 
                                     <div className="form-group">
-                                        <label className="form-label">Canal</label>
+                                        <label className="form-label">Canal (1–4, módulo 4 canais)</label>
                                         <input
                                             type="number"
                                             name="channel"
                                             className="form-input"
-                                            placeholder="Ex: 1"
+                                            placeholder="1 a 4"
                                             value={form.channel}
                                             onChange={handleChange}
                                             required
                                             min="1"
-                                            max="16"
+                                            max="4"
                                         />
                                     </div>
                                 </div>

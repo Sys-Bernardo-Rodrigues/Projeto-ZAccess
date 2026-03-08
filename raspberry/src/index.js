@@ -38,8 +38,25 @@ const socket = io(`${connectionConfig.serverUrl || 'http://localhost:3001'}/devi
     reconnectionDelayMax: config.reconnect.delayMax || 60000,
 });
 
+// Último relé/sensor ativado (para o painel piscar no diagrama)
+let lastActivated = null;
+const LAST_ACTIVATED_MS = 2500;
+
 // Só envia mudança de sensor quando estiver conectado
 inputController.setCallback((inputId, state) => {
+    const info = inputController.getInputsInfo().find((i) => i.id === inputId);
+    const activated = {
+        type: 'sensor',
+        inputId,
+        name: info ? info.name : inputId,
+        gpioPin: info ? info.gpioPin : null,
+        state,
+        at: Date.now(),
+    };
+    lastActivated = activated;
+    setTimeout(() => {
+        if (lastActivated === activated) lastActivated = null;
+    }, LAST_ACTIVATED_MS);
     if (socket.connected) {
         socket.emit('input:state-update', { inputId, state });
     }
@@ -118,6 +135,17 @@ socket.on('relay:toggle', (data) => {
     }
 
     if (success) {
+        const gpioPin = relayController.getGpioForChannel(data.channel);
+        const activated = {
+            type: 'relay',
+            channel: data.channel,
+            gpioPin: gpioPin != null ? gpioPin : 0,
+            at: Date.now(),
+        };
+        lastActivated = activated;
+        setTimeout(() => {
+            if (lastActivated === activated) lastActivated = null;
+        }, LAST_ACTIVATED_MS);
         const currentState = relayController.getState(data.channel);
         socket.emit('relay:state-update', {
             relayId: data.relayId,
@@ -253,9 +281,13 @@ process.on('SIGTERM', shutdown);
 
 // Painel web local (porta 5080) — config via SQLite
 function getStatus() {
+    const la = lastActivated && (Date.now() - lastActivated.at < LAST_ACTIVATED_MS) ? lastActivated : null;
     return {
         connected: socket.connected,
         relayStates: relayController.getAllStates(),
+        relayChannels: config.channelToGpio,
+        inputs: inputController.getInputsInfo(),
+        lastActivated: la,
         uptime: os.uptime(),
         memory: { total: os.totalmem(), free: os.freemem() },
         cpuTemp: getCpuTemp(),

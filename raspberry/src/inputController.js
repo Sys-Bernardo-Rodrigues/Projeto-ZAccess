@@ -15,6 +15,7 @@ try {
 }
 
 const inputs = new Map();
+const inputConfigs = new Map(); // id -> { id, name, gpioPin } para o painel/diagrama
 let onInputChange = null;
 
 /**
@@ -22,6 +23,7 @@ let onInputChange = null;
  */
 function initInput(inputConfig) {
     const { id, name, gpioPin, activeLow } = inputConfig;
+    inputConfigs.set(id, { id, name, gpioPin: gpioPin != null ? gpioPin : 0 });
 
     try {
         if (Gpio) {
@@ -97,6 +99,14 @@ function cleanup() {
         }
     });
     inputs.clear();
+    inputConfigs.clear();
+}
+
+/**
+ * Retorna lista de sensores configurados (para painel/diagrama)
+ */
+function getInputsInfo() {
+    return Array.from(inputConfigs.values());
 }
 
 /**
@@ -114,4 +124,5 @@ module.exports = {
     setCallback,
     cleanup,
     simulateTrigger,
+    getInputsInfo,
 };

@@ -23,7 +23,7 @@ const relaySchema = new mongoose.Schema(
             type: Number,
             required: [true, 'Canal do relé é obrigatório'],
             min: 1,
-            max: 16,
+            max: 4, // Módulo de Relé de 4 Canais
         },
         state: {
             type: String,

@@ -1,7 +1,49 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const LocationUser = require('../models/LocationUser');
 const config = require('../config/env');
 const { apiResponse } = require('../utils/helpers');
+
+/** Middleware para rotas do app: aceita apenas token de LocationUser (morador/síndico) */
+const locationUserAuthMiddleware = async (req, res, next) => {
+    try {
+        let token;
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
+        if (!token) {
+            return apiResponse(res, 401, null, 'Token não fornecido.');
+        }
+        const decoded = jwt.verify(token, config.jwt.secret);
+        if (decoded.type !== 'location_user') {
+            return apiResponse(res, 401, null, 'Token inválido para o app.');
+        }
+        const locationUser = await LocationUser.findById(decoded.id);
+        if (!locationUser || !locationUser.active) {
+            return apiResponse(res, 401, null, 'Usuário do local não encontrado ou desativado.');
+        }
+        req.locationUser = locationUser;
+        req.locationId = locationUser.locationId;
+        req.locationUserRole = locationUser.role;
+        next();
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+            return apiResponse(res, 401, null, 'Token inválido.');
+        }
+        if (error.name === 'TokenExpiredError') {
+            return apiResponse(res, 401, null, 'Token expirado.');
+        }
+        return apiResponse(res, 500, null, 'Erro de autenticação.');
+    }
+};
+
+/** Exige que o usuário do local seja síndico */
+const requireSindico = (req, res, next) => {
+    if (req.locationUserRole !== 'sindico') {
+        return apiResponse(res, 403, null, 'Acesso restrito a síndicos.');
+    }
+    next();
+};
 
 const authMiddleware = async (req, res, next) => {
     try {
@@ -44,4 +86,4 @@ const authorize = (...roles) => {
     };
 };
 
-module.exports = { authMiddleware, authorize };
+module.exports = { authMiddleware, authorize, locationUserAuthMiddleware, requireSindico };

@@ -30,10 +30,20 @@ const invitationSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        locationId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Location',
+            default: null,
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: true,
+            required: false,
+        },
+        createdByLocationUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'LocationUser',
+            required: false,
         },
     },
     {

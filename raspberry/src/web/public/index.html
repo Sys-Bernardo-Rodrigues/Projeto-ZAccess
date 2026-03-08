@@ -146,6 +146,72 @@
         .relay-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
         .relay-chip { padding: 8px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; }
         .relay-chip strong { color: var(--primary); }
+        /* Diagrama: placa + relés + sensores */
+        .diagram-wrap { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; margin-top: 16px; }
+        .diagram-board {
+            background: linear-gradient(145deg, #1e1e24 0%, #151518 100%);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            min-width: 280px;
+            position: relative;
+        }
+        .diagram-board h4 { margin: 0 0 16px 0; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .diagram-rpi {
+            width: 120px;
+            height: 80px;
+            background: linear-gradient(180deg, #2d2d35 0%, #1a1a1f 100%);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.2;
+            padding: 8px;
+        }
+        .diagram-relays {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            max-width: 260px;
+        }
+        .diagram-relay {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: center;
+            transition: box-shadow .2s, transform .1s;
+        }
+        .diagram-relay.state-open { border-color: var(--success); background: rgba(34, 197, 94, 0.08); }
+        .diagram-relay .ch { font-size: 0.7rem; color: var(--text-muted); }
+        .diagram-relay .gpio { font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+        .diagram-relay .st { font-size: 0.7rem; margin-top: 4px; }
+        .diagram-relay.blink { animation: diagram-blink 0.5s ease 4; }
+        .diagram-sensors { display: flex; flex-direction: column; gap: 10px; }
+        .diagram-sensor {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: box-shadow .2s;
+        }
+        .diagram-sensor.state-active { border-color: var(--warn); background: rgba(245, 158, 11, 0.08); }
+        .diagram-sensor .name { font-size: 0.85rem; }
+        .diagram-sensor .gpio { font-size: 0.75rem; color: var(--primary); }
+        .diagram-sensor.blink { animation: diagram-blink 0.5s ease 4; }
+        .diagram-wires { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        @keyframes diagram-blink {
+            0%, 100% { box-shadow: 0 0 0 0 transparent; }
+            50% { box-shadow: 0 0 0 6px var(--primary), 0 0 20px rgba(59, 130, 246, 0.5); }
+        }
         .toast {
             position: fixed;
             bottom: 24px;
@@ -172,6 +238,7 @@
         </div>
         <nav>
             <button type="button" data-panel="config" class="active">Configuração</button>
+            <button type="button" data-panel="diagram">Diagrama</button>
             <button type="button" data-panel="logs">Logs</button>
             <button type="button" data-panel="system">Sistema</button>
         </nav>
@@ -210,6 +277,29 @@
                     <code style="padding: 10px 14px; background: var(--bg); border-radius: 8px; font-size: 0.85rem;">sudo systemctl restart zaccess</code>
                 </div>
                 <p style="margin: 12px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">O painel pode desconectar por alguns segundos após clicar. Se o botão não funcionar (sudo), execute o comando acima no terminal.</p>
+            </div>
+        </section>
+
+        <section id="panel-diagram" class="panel">
+            <h2>Diagrama do hardware</h2>
+            <p class="sub">Raspberry Pi, módulo de relé de 4 canais e sensores. O relé ou sensor ativado pisca em destaque.</p>
+            <div class="card">
+                <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--text-muted);">Ligações: pinos GPIO do Raspberry Pi → módulo de relé (4 canais) e sensores de entrada. Quando um relé é acionado ou um sensor dispara, o elemento pisca no diagrama.</p>
+                <div class="diagram-wrap" id="diagramWrap">
+                    <div class="diagram-board">
+                        <h4>Raspberry Pi</h4>
+                        <div class="diagram-rpi">Raspberry Pi<br>GPIO BCM</div>
+                        <div style="margin-top: 10px; font-size: 0.7rem; color: var(--text-muted);">Relés: 17, 18, 27, 22</div>
+                    </div>
+                    <div class="diagram-board">
+                        <h4>Módulo de relé (4 canais)</h4>
+                        <div class="diagram-relays" id="diagramRelays">—</div>
+                    </div>
+                    <div class="diagram-board">
+                        <h4>Sensores (entradas)</h4>
+                        <div class="diagram-sensors" id="diagramSensors">—</div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -288,6 +378,7 @@
         }
         filterCat.addEventListener('change', fetchLogs);
 
+        let diagramInterval = null;
         document.querySelectorAll('.sidebar nav button').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.sidebar nav button').forEach(b => b.classList.remove('active'));
@@ -296,6 +387,13 @@
                 document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
                 if (btn.dataset.panel === 'config') loadConfig();
                 if (btn.dataset.panel === 'system') fetchStatus();
+                if (btn.dataset.panel === 'diagram') {
+                    fetchDiagram();
+                    if (diagramInterval) clearInterval(diagramInterval);
+                    diagramInterval = setInterval(fetchDiagram, 1000);
+                } else {
+                    if (diagramInterval) { clearInterval(diagramInterval); diagramInterval = null; }
+                }
             });
         });
 
@@ -360,6 +458,45 @@
                     ? Object.entries(r).map(([ch, st]) => `<span class="relay-chip">Canal ${ch}: <strong>${st}</strong></span>`).join('')
                     : 'Nenhum relé configurado.';
             }).catch(e => { document.getElementById('statusGrid').innerHTML = '<div class="status-card"><div class="value error">Erro ao carregar</div></div>'; });
+        }
+
+        function fetchDiagram() {
+            fetch('/api/status').then(r => r.json()).then(data => {
+                const relayChannels = data.relayChannels || {};
+                const relayStates = data.relayStates || {};
+                const inputs = data.inputs || [];
+                const last = data.lastActivated || null;
+
+                const relayEntries = Object.entries(relayChannels).sort((a, b) => Number(a[0]) - Number(b[0]));
+                const relaysHtml = relayEntries.length
+                    ? relayEntries.map(([ch, gpio]) => {
+                        const state = relayStates[ch] || 'closed';
+                        const isBlink = last && last.type === 'relay' && Number(last.channel) === Number(ch);
+                        return `<div class="diagram-relay ${state === 'open' ? 'state-open' : ''} ${isBlink ? 'blink' : ''}" data-channel="${ch}" data-gpio="${gpio}">
+                            <div class="ch">Canal ${ch}</div>
+                            <div class="gpio">GPIO ${gpio}</div>
+                            <div class="st">${state === 'open' ? 'Ligado' : 'Desligado'}</div>
+                        </div>`;
+                    }).join('')
+                    : '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum relé configurado.</p>';
+                document.getElementById('diagramRelays').innerHTML = relaysHtml;
+
+                const sensorsHtml = inputs.length
+                    ? inputs.map((inp) => {
+                        const id = inp.id != null ? inp.id : inp._id;
+                        const sid = id && typeof id === 'object' ? id.toString() : String(id);
+                        const isBlink = last && last.type === 'sensor' && (String(last.inputId) === sid || (last.inputId && last.inputId.toString && last.inputId.toString() === sid));
+                        return `<div class="diagram-sensor ${isBlink ? 'blink' : ''}" data-input-id="${escapeHtml(sid)}">
+                            <span class="name">${escapeHtml(inp.name || 'Sensor')}</span>
+                            <span class="gpio">GPIO ${inp.gpioPin != null ? inp.gpioPin : '?'}</span>
+                        </div>`;
+                    }).join('')
+                    : '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum sensor configurado.</p>';
+                document.getElementById('diagramSensors').innerHTML = sensorsHtml;
+            }).catch(() => {
+                document.getElementById('diagramRelays').innerHTML = '<p style="color: var(--danger);">Erro ao carregar.</p>';
+                document.getElementById('diagramSensors').innerHTML = '';
+            });
         }
 
         setInterval(() => {

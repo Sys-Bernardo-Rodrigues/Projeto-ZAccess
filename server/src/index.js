@@ -17,6 +17,7 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 const authRoutes = require('./routes/auth');
 const deviceRoutes = require('./routes/devices');
 const locationRoutes = require('./routes/locations');
+const locationUserRoutes = require('./routes/locationUsers');
 const relayRoutes = require('./routes/relays');
 const logRoutes = require('./routes/logs');
 const userRoutes = require('./routes/users');
@@ -25,6 +26,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const automationRoutes = require('./routes/automationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const invitationRoutes = require('./routes/invitationRoutes');
+const appRoutes = require('./routes/app');
 
 // Services
 const { initScheduleService } = require('./services/scheduleService');
@@ -56,7 +58,19 @@ app.set('io', io);
 // ============================================
 app.use(helmet());
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: (origin, cb) => {
+        const allowed = [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:5173',
+        ];
+        if (!origin || allowed.includes(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
+    },
     credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -68,6 +82,7 @@ app.use(morgan('dev'));
 // ============================================
 app.use('/api/auth', authRoutes);
 app.use('/api/devices', apiLimiter, deviceRoutes);
+app.use('/api/locations/:locationId/users', apiLimiter, locationUserRoutes);
 app.use('/api/locations', apiLimiter, locationRoutes);
 app.use('/api/relays', apiLimiter, relayRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
@@ -77,6 +92,7 @@ app.use('/api/schedules', apiLimiter, scheduleRoutes);
 app.use('/api/automations', apiLimiter, automationRoutes);
 app.use('/api/reports', apiLimiter, reportRoutes);
 app.use('/api/invitations', invitationRoutes);
+app.use('/api/app', appRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -11,7 +11,7 @@ Cliente que roda **apenas no Raspberry Pi**. O servidor fica **remoto** — não
 
 - Raspberry Pi 4 (ou 3)
 - Node.js 18+
-- Módulo de relés (opcional, conforme seu hardware)
+- **Módulo de Relé de 4 Canais** (compatível com a configuração padrão)
 - Internet (para conectar ao servidor remoto)
 
 ## Instalação rápida no Raspberry (recomendado: script + serviço)
@@ -46,7 +46,7 @@ Toda a configuração é feita pelo **painel web** (porta 5080), gravada em SQLi
 | Número serial | O mesmo cadastrado no painel do servidor |
 | Token | Copie no painel do servidor (Dispositivos → Editar → Copiar token) |
 
-Após salvar, reinicie: `sudo systemctl restart zaccess`. O mapeamento de GPIO está em `src/config.js` (campo `channelToGpio`) — altere só se sua fiação for diferente.
+Após salvar, reinicie: `sudo systemctl restart zaccess`. O mapeamento de GPIO para o **módulo de 4 canais** está em `src/config.js` (campo `channelToGpio`) — altere só se sua fiação for diferente.
 
 ## Execução
 
@@ -93,12 +93,16 @@ sudo bash uninstall-pi.sh --full
 
 O código e o `.env` continuam na pasta; use `./install-pi.sh` para reinstalar.
 
-## Conexão de relés (GPIO)
+## Conexão de relés (GPIO) – Módulo de 4 Canais
 
-| Canal | GPIO Pin |
-|-------|----------|
-| 1–8   | 17, 18, 27, 22, 23, 24, 25, 4 |
+| Canal | GPIO Pin (BCM) |
+|-------|----------------|
+| 1     | 17             |
+| 2     | 18             |
+| 3     | 27             |
+| 4     | 22             |
 
+- Use um **módulo de relé de 4 canais**. O mapeamento está em `src/config.js` (`channelToGpio`); altere só se sua fiação for diferente.
 - Relés em contato seco (NO/NC).
 - Modo **pulse**: ativa por X ms e desliga.
 - Modo **toggle**: muda estado e mantém.
