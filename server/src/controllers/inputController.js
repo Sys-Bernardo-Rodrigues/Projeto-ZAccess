@@ -1,6 +1,7 @@
 const Input = require('../models/Input');
 const Device = require('../models/Device');
 const ActivityLog = require('../models/ActivityLog');
+const { pushDeviceConfig } = require('../services/deviceSyncService');
 
 /**
  * @desc    Obter todos os sensores
@@ -43,6 +44,9 @@ exports.createInput = async (req, res) => {
             userId: req.user._id,
         });
 
+        const io = req.app.get('io');
+        if (io) await pushDeviceConfig(io, deviceId);
+
         res.status(201).json({ success: true, data: input });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
@@ -65,6 +69,10 @@ exports.updateInput = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Sensor não encontrado' });
         }
 
+        const io = req.app.get('io');
+        const deviceId = input.deviceId?.toString?.() || input.deviceId;
+        if (io && deviceId) await pushDeviceConfig(io, deviceId);
+
         res.status(200).json({ success: true, data: input });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
@@ -83,7 +91,11 @@ exports.deleteInput = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Sensor não encontrado' });
         }
 
+        const deviceId = input.deviceId?.toString?.() || input.deviceId;
         await input.deleteOne();
+
+        const io = req.app.get('io');
+        if (io && deviceId) await pushDeviceConfig(io, deviceId);
 
         res.status(200).json({ success: true, message: 'Sensor removido com sucesso' });
     } catch (err) {

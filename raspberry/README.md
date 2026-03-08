@@ -5,7 +5,7 @@ Cliente que roda **apenas no Raspberry Pi**. O servidor fica **remoto** — não
 ## O que mandar para o Raspberry
 
 - **Só a pasta `raspberry`** (código fonte + `package.json` + `.env.example`).
-- Não precisa enviar `server`, `client`, dados do servidor nem `docker-compose` do projeto principal.
+- **Não envie a pasta `node_modules`** — ela deve ser criada **no próprio Pi** com `npm install`. O módulo `better-sqlite3` é nativo e precisa ser compilado na arquitetura do Raspberry (ARM). Se você copiar `node_modules` do Windows/PC, verá o erro: `better_sqlite3.node: invalid ELF header`.
 
 ## Pré-requisitos no Pi
 
@@ -42,7 +42,7 @@ Toda a configuração é feita pelo **painel web** (porta 5080), gravada em SQLi
 
 | Campo | Descrição |
 |-------|-----------|
-| URL do servidor | Ex: `http://IP:3001` ou `https://seu-servidor.com:3001` |
+| URL do servidor | **No Pi use o IP do PC/servidor** (ex: `http://192.168.1.10:3001`). Não use `localhost` — no Raspberry, localhost é o próprio Pi. |
 | Número serial | O mesmo cadastrado no painel do servidor |
 | Token | Copie no painel do servidor (Dispositivos → Editar → Copiar token) |
 
@@ -76,6 +76,20 @@ O **install-pi.sh** já instala o serviço `zaccess`. Comandos úteis:
 | `sudo systemctl restart zaccess` | Reiniciar (após editar .env) |
 | `sudo systemctl stop zaccess` | Parar |
 | `sudo systemctl start zaccess` | Iniciar |
+
+## Erro "invalid ELF header" (better_sqlite3.node)
+
+Esse erro aparece quando a pasta `node_modules` foi copiada de outro computador (ex.: Windows) para o Pi. Módulos nativos como `better-sqlite3` não podem ser reaproveitados entre sistemas diferentes.
+
+**Solução:** no Raspberry, apague `node_modules` e instale de novo:
+
+```bash
+cd /home/zroot/raspberry   # ou o caminho da sua pasta
+rm -rf node_modules
+npm install
+```
+
+Depois inicie de novo: `npm start` ou `sudo systemctl restart zaccess`.
 
 ## Desinstalar o serviço
 

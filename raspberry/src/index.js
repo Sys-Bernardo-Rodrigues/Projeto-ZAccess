@@ -35,7 +35,9 @@ const socket = io(`${connectionConfig.serverUrl || 'http://localhost:3001'}/devi
     reconnection: config.reconnect.enabled,
     reconnectionAttempts: config.reconnect.maxAttempts,
     reconnectionDelay: config.reconnect.delay,
-    reconnectionDelayMax: config.reconnect.delayMax || 60000,
+    reconnectionDelayMax: config.reconnect.delayMax ?? 10000,
+    timeout: 20000,           // Tempo para considerar falha na conexão inicial
+    forceNew: false,          // Reutilizar engine para reconexão
 });
 
 // Último relé/sensor ativado (para o painel piscar no diagrama)
@@ -70,11 +72,14 @@ socket.on('connect', () => {
 });
 
 socket.on('disconnect', (reason) => {
-    logger.conexao(`Desconectado: ${reason}`);
+    logger.conexao(`Desconectado: ${reason}. Reconexão automática a cada 10s.`);
 });
 
 socket.on('connect_error', (err) => {
     logger.erro(`Conexão: ${err.message}`);
+    if (err.message && (err.message.includes('websocket') || err.message.includes('fetch'))) {
+        logger.erro('Dica: No Raspberry, use o IP do servidor (ex: http://192.168.1.10:3001), não localhost. Confira no painel :5080.');
+    }
 });
 
 socket.on('reconnect_attempt', (attempt) => {
@@ -88,7 +93,10 @@ socket.on('reconnect', () => {
 });
 
 socket.on('reconnect_failed', () => {
-    logger.erro('Reconexão falhou após várias tentativas. O cliente continuará tentando.');
+    logger.erro('Reconexão falhou. Nova tentativa em 10s.');
+    setTimeout(() => {
+        if (!socket.connected) socket.connect();
+    }, 10000);
 });
 
 socket.on('error', (data) => {
@@ -278,6 +286,15 @@ const shutdown = () => {
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// Watchdog: a cada 10s, se estiver desconectado, forçar nova tentativa (sempre tentar ficar conectado)
+const RECONNECT_INTERVAL_MS = 10000;
+setInterval(() => {
+    if (!socket.connected && !socket.connecting) {
+        logger.conexao('Watchdog: reconectando ao servidor...');
+        socket.connect();
+    }
+}, RECONNECT_INTERVAL_MS);
 
 // Painel web local (porta 5080) — config via SQLite
 function getStatus() {

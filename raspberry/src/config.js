@@ -10,8 +10,8 @@ module.exports = {
     reconnect: {
         enabled: true,
         maxAttempts: Infinity,
-        delay: 5000,
-        delayMax: 60000,
+        delay: 10000,       // Primeira tentativa após 10s
+        delayMax: 10000,    // Sempre 10s entre tentativas (sem aumentar)
     },
     /** Módulo de Relé de 4 Canais: canal -> pino GPIO (BCM) */
     channelToGpio: {

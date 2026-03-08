@@ -1,6 +1,7 @@
 const Relay = require('../models/Relay');
 const Device = require('../models/Device');
 const ActivityLog = require('../models/ActivityLog');
+const { pushDeviceConfig } = require('../services/deviceSyncService');
 const { apiResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
@@ -67,6 +68,10 @@ exports.createRelay = async (req, res, next) => {
         });
 
         logger.info(`Relay created: ${name} on channel ${channel} (device: ${device.name})`);
+
+        const io = req.app.get('io');
+        if (io) await pushDeviceConfig(io, deviceId);
+
         apiResponse(res, 201, { relay }, 'Relé criado com sucesso.');
     } catch (error) {
         next(error);
@@ -93,6 +98,10 @@ exports.updateRelay = async (req, res, next) => {
             relayId: relay._id,
             userId: req.user._id,
         });
+
+        const io = req.app.get('io');
+        const deviceId = relay.deviceId._id || relay.deviceId;
+        if (io && deviceId) await pushDeviceConfig(io, deviceId);
 
         apiResponse(res, 200, { relay }, 'Relé atualizado com sucesso.');
     } catch (error) {
@@ -161,11 +170,15 @@ exports.deleteRelay = async (req, res, next) => {
             req.params.id,
             { active: false },
             { new: true }
-        );
+        ).populate('deviceId', '_id');
 
         if (!relay) {
             return apiResponse(res, 404, null, 'Relé não encontrado.');
         }
+
+        const deviceId = relay.deviceId?._id || relay.deviceId;
+        const io = req.app.get('io');
+        if (io && deviceId) await pushDeviceConfig(io, deviceId);
 
         apiResponse(res, 200, null, 'Relé removido com sucesso.');
     } catch (error) {
