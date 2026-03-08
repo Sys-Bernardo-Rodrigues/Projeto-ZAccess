@@ -7,6 +7,7 @@ const ActivityLog = require('../models/ActivityLog');
 const Location = require('../models/Location');
 const LocationUser = require('../models/LocationUser');
 const { apiResponse } = require('../utils/helpers');
+const logger = require('../utils/logger');
 
 /** Helper: deviceIds e relayIds do local */
 async function getLocationDeviceAndRelayIds(locationId) {
@@ -188,6 +189,63 @@ exports.getLogs = async (req, res, next) => {
             .lean();
 
         apiResponse(res, 200, { logs, count: logs.length });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/app/relays/:id/toggle – abrir/fechar porta (morador/síndico)
+exports.toggleRelay = async (req, res, next) => {
+    try {
+        const { relayIds } = await getLocationDeviceAndRelayIds(req.locationId);
+        if (!relayIds.some((r) => r.toString() === req.params.id)) {
+            return apiResponse(res, 403, null, 'Porta não pertence ao seu local.');
+        }
+
+        const relay = await Relay.findById(req.params.id)
+            .populate('deviceId', 'name serialNumber status socketId');
+
+        if (!relay) {
+            return apiResponse(res, 404, null, 'Porta não encontrada.');
+        }
+
+        const device = relay.deviceId;
+        if (device.status !== 'online') {
+            return apiResponse(res, 400, null, 'Dispositivo está offline. Tente novamente em instantes.');
+        }
+
+        if (!device.socketId) {
+            return apiResponse(res, 400, null, 'Dispositivo sem conexão.');
+        }
+
+        const newState = relay.state === 'closed' ? 'open' : 'closed';
+        const io = req.app.get('io');
+
+        io.to(device.socketId).emit('relay:toggle', {
+            relayId: relay._id,
+            channel: relay.channel,
+            gpioPin: relay.gpioPin,
+            targetState: newState,
+            mode: relay.mode,
+            pulseDuration: relay.pulseDuration,
+            timestamp: new Date().toISOString(),
+        });
+
+        relay.state = newState;
+        relay.lastToggled = new Date();
+        await relay.save();
+
+        const action = newState === 'open' ? 'relay_activated' : 'relay_deactivated';
+        const userName = req.locationUser?.name || 'App';
+        await ActivityLog.create({
+            action,
+            description: `Porta "${relay.name}" ${newState === 'open' ? 'aberta' : 'fechada'} pelo app (${userName})`,
+            deviceId: device._id,
+            relayId: relay._id,
+        });
+
+        logger.info(`App relay toggled: ${relay.name} -> ${newState} by ${userName}`);
+        apiResponse(res, 200, { relay, newState }, newState === 'open' ? 'Porta aberta.' : 'Porta fechada.');
     } catch (error) {
         next(error);
     }

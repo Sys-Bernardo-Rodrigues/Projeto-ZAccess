@@ -3,6 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_card.dart';
+import '../widgets/loading_view.dart';
+import '../widgets/error_view.dart';
+import '../widgets/empty_state.dart';
 
 class LogsScreen extends StatefulWidget {
   const LogsScreen({super.key});
@@ -71,58 +75,26 @@ class _LogsScreenState extends State<LogsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: AppColors.bgSecondary,
         title: Text(
           'Verificações de acesso',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppColors.textPrimary, fontSize: 16),
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppColors.textPrimary, fontSize: 16),
         ),
-        iconTheme: const IconThemeData(color: AppColors.textSecondary),
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentPrimary),
-              ),
-            )
+          ? const LoadingView()
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton(
-                          onPressed: _load,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.accentPrimary,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Tentar novamente'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+              ? ErrorView(message: _error!, onRetry: _load)
               : _logs.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Nenhum registro de acesso ou automação no momento.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 15),
-                      ),
+                  ? const EmptyState(
+                      message: 'Nenhum registro de acesso ou automação no momento.',
+                      icon: Icons.history_rounded,
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppColors.accentPrimary,
                       backgroundColor: AppColors.bgCard,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: _logs.length,
                         itemBuilder: (context, i) {
                           final log = _logs[i] as Map<String, dynamic>;
@@ -136,29 +108,16 @@ class _LogsScreenState extends State<LogsScreen> {
                           final deviceName = device is Map ? device['name'] as String? : null;
                           final relayName = relay is Map ? relay['name'] as String? : null;
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AppColors.bgCard,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.borderColor),
-                              ),
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: AppCard(
+                              glass: true,
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentPrimary.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.history_rounded,
-                                      color: AppColors.accentPrimaryLight,
-                                      size: 20,
-                                    ),
+                                  AppIconCircle(
+                                    icon: Icons.history_rounded,
+                                    size: 40,
+                                    iconSize: 20,
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
@@ -167,7 +126,7 @@ class _LogsScreenState extends State<LogsScreen> {
                                       children: [
                                         Text(
                                           _actionLabel(action),
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.plusJakartaSans(
                                             fontWeight: FontWeight.w600,
                                             color: AppColors.textPrimary,
                                             fontSize: 14,
@@ -176,14 +135,14 @@ class _LogsScreenState extends State<LogsScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           description,
-                                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.textSecondary),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           '$createdAt${deviceName != null ? ' · $deviceName' : ''}${relayName != null ? ' · $relayName' : ''}',
-                                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textMuted),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),

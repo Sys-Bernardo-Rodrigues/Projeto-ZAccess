@@ -57,15 +57,19 @@ app.set('io', io);
 // Middleware
 // ============================================
 app.use(helmet());
+// CORS: em desenvolvimento aceita qualquer localhost/127.0.0.1 e o app Flutter (web ou mobile)
+const isDev = config.nodeEnv !== 'production';
 app.use(cors({
     origin: (origin, cb) => {
+        if (!origin) return cb(null, true);
+        const localhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
         const allowed = [
             'http://localhost:5173',
             'http://localhost:3000',
             'http://127.0.0.1:3000',
             'http://127.0.0.1:5173',
         ];
-        if (!origin || allowed.includes(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+        if (localhost || allowed.includes(origin) || isDev) {
             cb(null, true);
         } else {
             cb(null, false);

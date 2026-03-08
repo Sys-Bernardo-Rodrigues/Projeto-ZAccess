@@ -10,6 +10,7 @@ router.use(locationUserAuthMiddleware);
 router.get('/me', appController.getMe);
 router.get('/automations', appController.getAutomations);
 router.get('/relays', appController.getRelays);
+router.post('/relays/:id/toggle', appController.toggleRelay);
 router.get('/invitations', appController.getInvitations);
 router.post('/invitations', appController.createInvitation);
 router.delete('/invitations/:id', appController.deleteInvitation);

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_card.dart';
+import '../widgets/loading_view.dart';
+import '../widgets/error_view.dart';
+import '../widgets/empty_state.dart';
 
 class AutomationsScreen extends StatefulWidget {
   const AutomationsScreen({super.key});
@@ -51,58 +55,26 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: AppColors.bgSecondary,
         title: Text(
           'Automações',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
-        iconTheme: const IconThemeData(color: AppColors.textSecondary),
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentPrimary),
-              ),
-            )
+          ? const LoadingView()
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton(
-                          onPressed: _load,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.accentPrimary,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Tentar novamente'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+              ? ErrorView(message: _error!, onRetry: _load)
               : _automations.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Nenhuma automação configurada para este local.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 15),
-                      ),
+                  ? const EmptyState(
+                      message: 'Nenhuma automação configurada para este local.',
+                      icon: Icons.auto_awesome_rounded,
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppColors.accentPrimary,
                       backgroundColor: AppColors.bgCard,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: _automations.length,
                         itemBuilder: (context, i) {
                           final a = _automations[i] as Map<String, dynamic>;
@@ -114,39 +86,28 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
                           final actionName = actionRelay is Map ? (actionRelay['name'] as String?) : null;
                           final enabled = a['enabled'] as bool? ?? true;
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AppColors.bgCard,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.borderColor),
-                              ),
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: AppCard(
+                              glass: true,
                               child: Row(
                                 children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: enabled
-                                          ? AppColors.accentPrimary.withValues(alpha: 0.2)
-                                          : AppColors.textMuted.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      Icons.auto_awesome_rounded,
-                                      color: enabled ? AppColors.accentPrimaryLight : AppColors.textMuted,
-                                      size: 24,
-                                    ),
+                                  AppIconCircle(
+                                    icon: Icons.auto_awesome_rounded,
+                                    backgroundColor: enabled
+                                        ? AppColors.accentPrimary.withValues(alpha: 0.2)
+                                        : AppColors.textMuted.withValues(alpha: 0.2),
+                                    foregroundColor: enabled ? AppColors.accentPrimary : AppColors.textMuted,
+                                    size: 48,
+                                    iconSize: 24,
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: AppSpacing.md),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           a['name'] as String? ?? 'Automação',
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.plusJakartaSans(
                                             fontWeight: FontWeight.w600,
                                             color: AppColors.textPrimary,
                                             fontSize: 15,
@@ -157,7 +118,7 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
                                           'Quando "${triggerName ?? '—'}" → "${actionName ?? '—'}"',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.plusJakartaSans(
                                             fontSize: 13,
                                             color: AppColors.textMuted,
                                           ),

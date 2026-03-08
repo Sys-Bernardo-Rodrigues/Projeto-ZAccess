@@ -139,7 +139,36 @@ export default function InviteAccessPage() {
 
     if (error) {
         return (
-            <div className="invite-access-container">
+            <div className="invite-access-container invite-access-container--error">
+                <style>{`
+                    .invite-access-container--error {
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #0a0e1a;
+                        padding: 20px;
+                    }
+                    .invite-access-container--error .error-card {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        text-align: center;
+                        max-width: 400px;
+                    }
+                    .invite-access-container--error .error-card h1 {
+                        margin: 20px 0 12px;
+                        font-size: 1.75rem;
+                        font-weight: 800;
+                        color: #f1f5f9;
+                    }
+                    .invite-access-container--error .error-card p {
+                        margin-bottom: 24px;
+                        color: #94a3b8;
+                        font-size: 1rem;
+                    }
+                `}</style>
                 <div className="error-card">
                     <Shield size={64} color="var(--accent-danger)" />
                     <h1>Acesso Negado</h1>

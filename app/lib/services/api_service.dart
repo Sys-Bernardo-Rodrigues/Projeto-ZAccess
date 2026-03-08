@@ -46,6 +46,8 @@ class ApiService {
   static Future<Map<String, dynamic>> getMe() async => _request('GET', 'api/app/me');
   static Future<Map<String, dynamic>> getAutomations() async => _request('GET', 'api/app/automations');
   static Future<Map<String, dynamic>> getRelays() async => _request('GET', 'api/app/relays');
+  static Future<Map<String, dynamic>> toggleRelay(String relayId) async =>
+      _request('POST', 'api/app/relays/$relayId/toggle');
   static Future<Map<String, dynamic>> getInvitations() async => _request('GET', 'api/app/invitations');
   static Future<Map<String, dynamic>> createInvitation(Map<String, dynamic> payload) async =>
       _request('POST', 'api/app/invitations', body: payload);
