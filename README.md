@@ -39,7 +39,7 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
    npm run seed    # opcional: usuário admin@zaccess.com.br / admin123_password
    npm run dev
    ```
-   API em **http://localhost:3001**.
+   API em **http://localhost:3000**.
 
 4. **Painel web**:
    ```bash
@@ -47,7 +47,7 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
    npm install
    npm run dev
    ```
-   Painel em **http://localhost:5173** (proxy para API em 3001).
+   Painel em **http://localhost:5173** (proxy para API em 3000).
 
 5. **Raspberry Pi**: veja [raspberry/README.md](raspberry/README.md) para instalação no dispositivo.
 
@@ -58,7 +58,7 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
 | Variável | Descrição |
 |----------|-----------|
 | `NODE_ENV` | `development` ou `production` |
-| `SERVER_PORT` | Porta da API (padrão: 3001) |
+| `SERVER_PORT` | Porta da API (padrão: 3000) |
 | `SERVER_HOST` | Host (padrão: 0.0.0.0) |
 | `MONGO_URI` | URI do MongoDB (ex: `mongodb://user:pass@localhost:27017/zaccess`) |
 | `MONGO_INITDB_ROOT_USERNAME` | Usuário root MongoDB (Docker) |
@@ -69,8 +69,8 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
 | `REDIS_PASSWORD` | Senha do Redis |
 | `JWT_SECRET` | Chave secreta do JWT |
 | `JWT_EXPIRES_IN` | Expiração do token (ex: 7d) |
-| `VITE_API_URL` | URL da API para o client (ex: http://localhost:3001) |
-| `VITE_WS_URL` | URL do WebSocket para o client (ex: http://localhost:3001) |
+| `VITE_API_URL` | URL da API para o client (ex: http://localhost:3000) |
+| `VITE_WS_URL` | URL do WebSocket para o client (ex: http://localhost:3000) |
 
 O servidor lê o `.env` da **raiz do repositório**.
 

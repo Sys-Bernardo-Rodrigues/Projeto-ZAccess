@@ -42,7 +42,7 @@ Toda a configuração é feita pelo **painel web** (porta 5080), gravada em SQLi
 
 | Campo | Descrição |
 |-------|-----------|
-| URL do servidor | **No Pi use o IP do PC/servidor** (ex: `http://192.168.1.10:3001`). Não use `localhost` — no Raspberry, localhost é o próprio Pi. |
+| URL do servidor | **No Pi use o IP do PC/servidor** (ex: `http://192.168.1.10:3000`). Não use `localhost` — no Raspberry, localhost é o próprio Pi. |
 | Número serial | O mesmo cadastrado no painel do servidor |
 | Token | Copie no painel do servidor (Dispositivos → Editar → Copiar token) |
 
