@@ -29,3 +29,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Local docs / notas (não versionar)
+OPENAPI_TODO.local.md

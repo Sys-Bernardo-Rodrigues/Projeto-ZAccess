@@ -19,4 +19,8 @@ module.exports = {
         secret: process.env.JWT_SECRET || 'default_secret_change_me',
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
+    docs: {
+        username: process.env.DOCS_USERNAME || '',
+        password: process.env.DOCS_PASSWORD || '',
+    },
 };

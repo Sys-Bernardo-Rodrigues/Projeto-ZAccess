@@ -5,6 +5,8 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const swaggerUi = require('swagger-ui-express');
 
 const config = require('./config/env');
 const connectDatabase = require('./config/database');
@@ -12,6 +14,7 @@ const { connectRedis } = require('./config/redis');
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
+const openapiSpec = require('./docs/openapi');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -79,7 +82,123 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser(config.jwt.secret));
 app.use(morgan('dev'));
+
+// ============================================
+// OpenAPI / Swagger UI – tela de login simples
+// ============================================
+const docsAuth = (req, res, next) => {
+    const { username, password } = config.docs;
+    if (!username || !password) {
+        logger.warn(
+            `Docs desabilitada - config.docs.username="${username}", config.docs.password="${
+                password ? '***' : ''
+            }"`
+        );
+        return res.status(503).json({
+            success: false,
+            message: 'Documentação desabilitada: DOCS_USERNAME/DOCS_PASSWORD não configurados.',
+        });
+    }
+
+    // 1) Se já tem cookie de sessão válido, permite
+    if (req.signedCookies && req.signedCookies.docsAuth === 'ok') {
+        return next();
+    }
+
+    // 2) Se vier Basic Auth (ex.: via ferramenta externa), continua aceitando
+    const header = req.headers.authorization || '';
+    const [scheme, encoded] = header.split(' ');
+    if (scheme === 'Basic' && encoded) {
+        const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+        const [user, pass] = decoded.split(':');
+        if (user === username && pass === password) {
+            return next();
+        }
+    }
+
+    // 3) Caso contrário, redireciona para a tela de login HTML
+    return res.redirect('/docs/login');
+};
+
+// Tela de login (GET)
+app.get('/docs/login', (req, res) => {
+    const { username, password } = config.docs;
+    if (!username || !password) {
+        return res.status(503).send('Documentação desabilitada: DOCS_USERNAME/DOCS_PASSWORD não configurados.');
+    }
+
+    if (req.signedCookies && req.signedCookies.docsAuth === 'ok') {
+        return res.redirect('/docs');
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zaccess API Docs – Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background:#0f172a; color:#e5e7eb; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
+    .card { background:#020617; border-radius:12px; padding:32px; width:100%; max-width:380px; box-shadow:0 20px 40px rgba(15,23,42,0.7); border:1px solid #1f2937; }
+    h1 { margin:0 0 8px; font-size:1.4rem; }
+    p { margin:0 0 24px; font-size:0.9rem; color:#9ca3af; }
+    label { display:block; font-size:0.8rem; margin-bottom:4px; color:#e5e7eb; }
+    input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #374151; background:#020617; color:#e5e7eb; font-size:0.9rem; margin-bottom:16px; box-sizing:border-box; }
+    input:focus { outline:none; border-color:#22c55e; box-shadow:0 0 0 1px #22c55e33; }
+    button { width:100%; padding:10px 12px; border-radius:8px; border:none; background:#22c55e; color:#020617; font-weight:600; font-size:0.9rem; cursor:pointer; }
+    button:hover { background:#16a34a; }
+    .hint { margin-top:12px; font-size:0.75rem; color:#6b7280; text-align:center; }
+    .error { color:#f97373; font-size:0.8rem; margin-bottom:12px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Zaccess API Docs</h1>
+    <p>Informe as credenciais de documentação para acessar o Swagger UI.</p>
+    <form method="POST" action="/docs/login">
+      <label for="username">Usuário</label>
+      <input id="username" name="username" type="text" autocomplete="username" required />
+      <label for="password">Senha</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+      <button type="submit">Entrar</button>
+    </form>
+    <div class="hint">Apenas para uso interno de desenvolvimento/administração.</div>
+  </div>
+</body>
+</html>`);
+});
+
+// Tela de login (POST)
+app.post('/docs/login', (req, res) => {
+    const { username, password } = config.docs;
+    if (!username || !password) {
+        return res.status(503).send('Documentação desabilitada: DOCS_USERNAME/DOCS_PASSWORD não configurados.');
+    }
+
+    const { username: formUser, password: formPass } = req.body || {};
+    if (formUser === username && formPass === password) {
+        res.cookie('docsAuth', 'ok', {
+            httpOnly: true,
+            sameSite: 'lax',
+            signed: true,
+            // Em produção, definir secure:true se usar HTTPS
+        });
+        return res.redirect('/docs');
+    }
+
+    res.status(401).send('Credenciais inválidas para documentação.');
+});
+
+// Logout simples
+app.post('/docs/logout', (req, res) => {
+    res.clearCookie('docsAuth');
+    return res.redirect('/docs/login');
+});
+
+app.use('/docs', docsAuth, swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
 // ============================================
 // Routes
