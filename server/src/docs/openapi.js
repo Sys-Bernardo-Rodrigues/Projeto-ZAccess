@@ -229,6 +229,57 @@ const options = {
                         updatedAt: { type: 'string', format: 'date-time' },
                     },
                 },
+                ActivityLog: {
+                    type: 'object',
+                    properties: {
+                        _id: { type: 'string' },
+                        action: {
+                            type: 'string',
+                            enum: [
+                                'device_connected',
+                                'device_disconnected',
+                                'relay_activated',
+                                'relay_deactivated',
+                                'device_registered',
+                                'device_updated',
+                                'device_removed',
+                                'relay_created',
+                                'relay_updated',
+                                'location_created',
+                                'user_login',
+                                'user_logout',
+                                'command_sent',
+                                'command_response',
+                                'heartbeat_timeout',
+                                'emergency_alert',
+                                'input_created',
+                                'schedule_created',
+                                'schedule_executed',
+                                'automation_executed',
+                                'invitation_created',
+                                'public_access_invitation',
+                            ],
+                            example: 'relay_activated',
+                        },
+                        severity: {
+                            type: 'string',
+                            enum: ['info', 'warning', 'danger', 'critical'],
+                            example: 'info',
+                        },
+                        description: { type: 'string', example: 'Relé Portão principal acionado via painel.' },
+                        deviceId: { type: 'string', nullable: true },
+                        relayId: { type: 'string', nullable: true },
+                        userId: { type: 'string', nullable: true },
+                        metadata: {
+                            type: 'object',
+                            additionalProperties: true,
+                            example: { source: 'panel', ip: '192.168.1.10' },
+                        },
+                        ipAddress: { type: 'string', nullable: true },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                },
                 Location: {
                     type: 'object',
                     properties: {
@@ -270,6 +321,27 @@ const options = {
                         updatedAt: { type: 'string', format: 'date-time' },
                     },
                 },
+                LocationUser: {
+                    type: 'object',
+                    properties: {
+                        _id: { type: 'string' },
+                        locationId: { type: 'string' },
+                        name: { type: 'string', example: 'João da Silva' },
+                        email: {
+                            type: 'string',
+                            format: 'email',
+                            example: 'joao.silva@example.com',
+                        },
+                        role: {
+                            type: 'string',
+                            enum: ['morador', 'sindico'],
+                            example: 'morador',
+                        },
+                        active: { type: 'boolean', example: true },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                },
             },
         },
         security: [
@@ -285,6 +357,7 @@ const options = {
             { name: 'Inputs', description: 'Sensores / entradas digitais' },
             { name: 'Locations', description: 'Locais (condomínios, escritórios, etc.)' },
             { name: 'Users', description: 'Usuários administradores do sistema' },
+            { name: 'LocationUsers', description: 'Moradores e síndicos vinculados a um local' },
             { name: 'Invitations', description: 'Convites de acesso' },
             { name: 'Schedules', description: 'Agendamentos de automações' },
             { name: 'Automations', description: 'Automações baseadas em regras' },
@@ -930,6 +1003,342 @@ const options = {
                     responses: {
                         200: {
                             description: 'Comando enviado com sucesso.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+
+            // ============================
+            // Users (admin)
+            // ============================
+            '/api/users': {
+                get: {
+                    tags: ['Users'],
+                    summary: 'Lista usuários administradores',
+                    description: 'Lista usuários do sistema (admin, operator, viewer). Acesso apenas para admin.',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Lista de usuários.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/User' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                post: {
+                    tags: ['Users'],
+                    summary: 'Cria usuário administrador',
+                    description: 'Cria um novo usuário (admin/operator/viewer). Acesso apenas para admin.',
+                    security: [{ bearerAuth: [] }],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['name', 'email', 'password'],
+                                    properties: {
+                                        name: { type: 'string' },
+                                        email: { type: 'string', format: 'email' },
+                                        password: { type: 'string', format: 'password' },
+                                        role: {
+                                            type: 'string',
+                                            enum: ['admin', 'operator', 'viewer'],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        201: {
+                            description: 'Usuário criado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/users/{id}': {
+                get: {
+                    tags: ['Users'],
+                    summary: 'Detalhes de usuário admin',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'id',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Usuário encontrado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                        404: {
+                            description: 'Usuário não encontrado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+                put: {
+                    tags: ['Users'],
+                    summary: 'Atualiza usuário admin',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'id',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        name: { type: 'string' },
+                                        email: { type: 'string', format: 'email' },
+                                        password: { type: 'string', format: 'password' },
+                                        role: {
+                                            type: 'string',
+                                            enum: ['admin', 'operator', 'viewer'],
+                                        },
+                                        active: { type: 'boolean' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        200: {
+                            description: 'Usuário atualizado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+                delete: {
+                    tags: ['Users'],
+                    summary: 'Remove usuário admin',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'id',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Usuário removido.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+
+            // ============================
+            // Location Users (moradores/síndicos)
+            // ============================
+            '/api/locations/{locationId}/users': {
+                get: {
+                    tags: ['LocationUsers'],
+                    summary: 'Lista usuários de um local',
+                    description:
+                        'Lista moradores e síndicos de um local específico. Disponível para admin/operator do sistema.',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'locationId',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Lista de usuários do local.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/LocationUser' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                post: {
+                    tags: ['LocationUsers'],
+                    summary: 'Cria usuário de local (morador/síndico)',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'locationId',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['name', 'email', 'role'],
+                                    properties: {
+                                        name: { type: 'string' },
+                                        email: { type: 'string', format: 'email' },
+                                        role: {
+                                            type: 'string',
+                                            enum: ['morador', 'sindico'],
+                                        },
+                                        active: { type: 'boolean' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        201: {
+                            description: 'Usuário do local criado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/locations/{locationId}/users/{userId}': {
+                put: {
+                    tags: ['LocationUsers'],
+                    summary: 'Atualiza usuário de local',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'locationId',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                        {
+                            name: 'userId',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        name: { type: 'string' },
+                                        email: { type: 'string', format: 'email' },
+                                        role: {
+                                            type: 'string',
+                                            enum: ['morador', 'sindico'],
+                                        },
+                                        active: { type: 'boolean' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        200: {
+                            description: 'Usuário do local atualizado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+                delete: {
+                    tags: ['LocationUsers'],
+                    summary: 'Remove usuário de local',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'locationId',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                        {
+                            name: 'userId',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Usuário do local removido.',
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ApiResponse' },
@@ -1614,6 +2023,404 @@ const options = {
                                             uptime: { type: 'number' },
                                         },
                                     },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+
+            // ============================
+            // Logs
+            // ============================
+            '/api/logs': {
+                get: {
+                    tags: ['Logs'],
+                    summary: 'Lista logs de atividade',
+                    description:
+                        'Retorna os logs de atividades do sistema (dispositivos, relés, convites, agendamentos, etc.).',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'action',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string' },
+                            description: 'Filtra por tipo de ação (ex.: relay_activated, device_connected).',
+                        },
+                        {
+                            name: 'severity',
+                            in: 'query',
+                            required: false,
+                            schema: {
+                                type: 'string',
+                                enum: ['info', 'warning', 'danger', 'critical'],
+                            },
+                        },
+                        {
+                            name: 'deviceId',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string' },
+                        },
+                        {
+                            name: 'relayId',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string' },
+                        },
+                        {
+                            name: 'userId',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string' },
+                        },
+                        {
+                            name: 'from',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string', format: 'date-time' },
+                            description: 'Data/hora inicial para filtragem.',
+                        },
+                        {
+                            name: 'to',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string', format: 'date-time' },
+                            description: 'Data/hora final para filtragem.',
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Lista de logs.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/ActivityLog' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/logs/stats': {
+                get: {
+                    tags: ['Logs'],
+                    summary: 'Estatísticas de logs',
+                    description: 'Retorna estatísticas agregadas de logs (por ação, severidade, período, etc.).',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Estatísticas de logs.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+
+            // ============================
+            // Reports
+            // ============================
+            '/api/reports/access': {
+                get: {
+                    tags: ['Reports'],
+                    summary: 'Relatório de acessos',
+                    description:
+                        'Retorna um relatório agregado de acessos (por dispositivo, relé, convite, período, etc.).',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'from',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string', format: 'date-time' },
+                        },
+                        {
+                            name: 'to',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string', format: 'date-time' },
+                        },
+                        {
+                            name: 'locationId',
+                            in: 'query',
+                            required: false,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Relatório de acessos.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+
+            // ============================
+            // App (Flutter)
+            // ============================
+            '/api/app/me': {
+                get: {
+                    tags: ['App'],
+                    summary: 'Perfil do usuário (app)',
+                    description:
+                        'Retorna os dados do usuário do local autenticado via token do app (LocationUser).',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Dados do usuário do local.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                        401: {
+                            description: 'Token inválido ou usuário do local desativado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/app/automations': {
+                get: {
+                    tags: ['App'],
+                    summary: 'Automações do local (app)',
+                    description: 'Lista as automações disponíveis para o local do usuário autenticado.',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Lista de automações do local.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/Automation' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/app/relays': {
+                get: {
+                    tags: ['App'],
+                    summary: 'Relés do local (app)',
+                    description: 'Lista os relés disponíveis para o local do usuário autenticado.',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Lista de relés do local.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/Relay' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/app/relays/{id}/toggle': {
+                post: {
+                    tags: ['App'],
+                    summary: 'Aciona relé (app)',
+                    description:
+                        'Aciona um relé do local do usuário autenticado a partir do app (por exemplo, abrir um portão).',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'id',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Comando enviado com sucesso.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/app/invitations': {
+                get: {
+                    tags: ['App'],
+                    summary: 'Lista convites do usuário (app)',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Lista de convites do usuário/local.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/Invitation' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                post: {
+                    tags: ['App'],
+                    summary: 'Cria convite (app)',
+                    description: 'Cria um novo convite vinculado ao local do usuário autenticado.',
+                    security: [{ bearerAuth: [] }],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['name', 'relayIds', 'validFrom', 'validUntil'],
+                                    properties: {
+                                        name: { type: 'string' },
+                                        relayIds: {
+                                            type: 'array',
+                                            items: { type: 'string' },
+                                        },
+                                        validFrom: { type: 'string', format: 'date-time' },
+                                        validUntil: { type: 'string', format: 'date-time' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        201: {
+                            description: 'Convite criado.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/app/invitations/{id}': {
+                delete: {
+                    tags: ['App'],
+                    summary: 'Remove convite (app)',
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: 'id',
+                            in: 'path',
+                            required: true,
+                            schema: { type: 'string' },
+                        },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Convite removido.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/app/logs': {
+                get: {
+                    tags: ['App'],
+                    summary: 'Logs do local (app – síndico)',
+                    description:
+                        'Lista logs de acesso/uso relacionados ao local do usuário autenticado. Disponível apenas para síndicos.',
+                    security: [{ bearerAuth: [] }],
+                    responses: {
+                        200: {
+                            description: 'Lista de logs do local.',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/ApiResponse' },
+                                            {
+                                                type: 'object',
+                                                properties: {
+                                                    data: {
+                                                        type: 'array',
+                                                        items: { $ref: '#/components/schemas/ActivityLog' },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                        403: {
+                            description: 'Acesso restrito a síndicos.',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ApiResponse' },
                                 },
                             },
                         },
