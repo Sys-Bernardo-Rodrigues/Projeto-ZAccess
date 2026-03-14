@@ -104,6 +104,10 @@
             cursor: pointer;
             transition: background .15s, opacity .15s;
         }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
         .btn-primary { background: var(--primary); color: #fff; }
         .btn-primary:hover { background: var(--primary-hover); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -289,7 +293,7 @@
                     <div class="diagram-board">
                         <h4>Raspberry Pi</h4>
                         <div class="diagram-rpi">Raspberry Pi<br>GPIO BCM</div>
-                        <div style="margin-top: 10px; font-size: 0.7rem; color: var(--text-muted);">Relés: 17, 18, 27, 22</div>
+                        <div style="margin-top: 10px; font-size: 0.7rem; color: var(--text-muted);">Relés (BCM): 5, 6, 13, 19</div>
                     </div>
                     <div class="diagram-board">
                         <h4>Módulo de relé (4 canais)</h4>
@@ -333,6 +337,7 @@
                 <h3>Status</h3>
                 <div class="status-grid" id="statusGrid"></div>
                 <h3 style="margin-top: 24px;">Rélés</h3>
+                <p class="sub" style="margin-top: 0; margin-bottom: 8px; font-size: 0.85rem;">Controle rápido local dos canais (IN1–IN4) deste Raspberry Pi.</p>
                 <div class="relay-grid" id="relayList">—</div>
             </div>
         </section>
@@ -453,10 +458,52 @@
                     <div class="status-card"><div class="label">Temperatura CPU</div><div class="value">${data.cpuTemp != null ? data.cpuTemp + ' °C' : '—'}</div></div>
                     <div class="status-card"><div class="label">Memória</div><div class="value">${usedMb} / ${totalMb} MB (${pct}%)</div></div>
                 `;
+                const relayChannels = data.relayChannels || {};
                 const r = data.relayStates || {};
-                document.getElementById('relayList').innerHTML = Object.keys(r).length
-                    ? Object.entries(r).map(([ch, st]) => `<span class="relay-chip">Canal ${ch}: <strong>${st}</strong></span>`).join('')
-                    : 'Nenhum relé configurado.';
+                const relayListEl = document.getElementById('relayList');
+                if (!Object.keys(r).length) {
+                    relayListEl.innerHTML = 'Nenhum relé configurado.';
+                } else {
+                    relayListEl.innerHTML = Object.entries(r).map(([ch, st]) => {
+                        const gpio = relayChannels[ch] != null ? relayChannels[ch] : '?';
+                        const isOn = st === 'open';
+                        const label = `IN${ch}`;
+                        const btnLabel = isOn ? 'Desligar' : 'Ligar';
+                        const target = isOn ? 'closed' : 'open';
+                        return `<div class="relay-chip">
+                            <span>${label} · Canal ${ch} · GPIO ${gpio}: <strong>${st}</strong></span>
+                            <button type="button" class="btn btn-primary btn-small relay-action" data-channel="${ch}" data-target="${target}">
+                                ${btnLabel}
+                            </button>
+                        </div>`;
+                    }).join('');
+
+                    // Rebind ações locais
+                    document.querySelectorAll('.relay-action').forEach((btn) => {
+                        btn.onclick = () => {
+                            const ch = Number(btn.dataset.channel);
+                            const targetState = btn.dataset.target;
+                            btn.disabled = true;
+                            fetch('/api/local/relay-toggle', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ channel: ch, targetState }),
+                            })
+                                .then((r) => r.json())
+                                .then((resp) => {
+                                    if (resp.error) throw new Error(resp.error);
+                                    toast(`Relé IN${ch} -> ${targetState === 'open' ? 'Ligado' : 'Desligado'}`, 'success');
+                                    fetchStatus();
+                                })
+                                .catch((err) => {
+                                    toast(err.message || 'Erro ao acionar relé local.', 'error');
+                                })
+                                .finally(() => {
+                                    btn.disabled = false;
+                                });
+                        };
+                    });
+                }
             }).catch(e => { document.getElementById('statusGrid').innerHTML = '<div class="status-card"><div class="value error">Erro ao carregar</div></div>'; });
         }
 

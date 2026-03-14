@@ -310,6 +310,6 @@ function getStatus() {
         cpuTemp: getCpuTemp(),
     };
 }
-startWebServer(logger, getStatus, settings);
+startWebServer(logger, getStatus, settings, relayController);
 
 logger.info('Zaccess Raspberry Pi Client iniciado. Pressione Ctrl+C para encerrar.');

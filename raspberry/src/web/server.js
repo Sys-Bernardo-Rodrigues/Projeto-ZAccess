@@ -9,7 +9,7 @@ const { exec } = require('child_process');
 
 const PORT = 5080;
 
-function createServer(logger, getStatus, settings) {
+function createServer(logger, getStatus, settings, relayController) {
     const app = express();
     app.use(express.json({ limit: '1mb' }));
     app.use(express.static(path.join(__dirname, 'public')));
@@ -80,11 +80,39 @@ function createServer(logger, getStatus, settings) {
         }, 2000);
     });
 
+    // Controle local de relés (sem passar pelo servidor central)
+    app.post('/api/local/relay-toggle', (req, res) => {
+        try {
+            if (!relayController) {
+                return res.status(400).json({ error: 'Controle de relés não disponível neste modo.' });
+            }
+
+            const { channel, targetState } = req.body || {};
+            const ch = Number(channel);
+            const desired = targetState === 'open' ? 'open' : 'closed';
+
+            if (!ch || ch < 1) {
+                return res.status(400).json({ error: 'Canal inválido.' });
+            }
+
+            const ok = relayController.setRelay(ch, desired);
+            if (!ok) {
+                return res.status(500).json({ error: 'Falha ao acionar relé.' });
+            }
+
+            logger.relay(`Comando local: canal ${ch} -> ${desired}`);
+            return res.json({ ok: true, channel: ch, state: desired });
+        } catch (e) {
+            logger.erro(`Erro em /api/local/relay-toggle: ${e.message}`);
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
     return app;
 }
 
-function startWebServer(logger, getStatus, settings) {
-    const app = createServer(logger, getStatus, settings);
+function startWebServer(logger, getStatus, settings, relayController) {
+    const app = createServer(logger, getStatus, settings, relayController);
     const server = app.listen(PORT, '0.0.0.0', () => {
         logger.info(`Painel web em http://0.0.0.0:${PORT} (acesse pelo IP da rede na porta ${PORT})`);
     });
