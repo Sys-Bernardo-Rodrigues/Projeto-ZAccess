@@ -30,10 +30,31 @@ echo "  (Raspberry Pi 4 + Raspberry OS)"
 echo "=============================================="
 
 # --- Atualizar e instalar dependências do sistema ---
-echo "[*] Atualizando pacotes e instalando rsync + pigpio..."
+echo "[*] Atualizando pacotes e instalando rsync..."
 apt-get update -qq
 apt-get install -y -qq rsync
-apt-get install -y -qq pigpio
+
+# pigpio C library — necessário para o pacote Node; em alguns sistemas não existe pacote apt
+install_pigpio() {
+  if apt-get install -y -qq pigpio 2>/dev/null; then
+    echo "[OK] pigpio instalado via apt."
+    return 0
+  fi
+  if apt-get install -y -qq pigpio-tools 2>/dev/null; then
+    echo "[OK] pigpio-tools instalado via apt."
+    return 0
+  fi
+  echo "[*] pigpio não encontrado nos repositórios. A instalar a partir do código fonte..."
+  apt-get install -y -qq build-essential git
+  local PIGPIO_SRC="/tmp/pigpio-build"
+  rm -rf "$PIGPIO_SRC"
+  git clone --depth 1 https://github.com/joan2937/pigpio.git "$PIGPIO_SRC"
+  (cd "$PIGPIO_SRC" && make && make install)
+  ldconfig 2>/dev/null || true
+  rm -rf "$PIGPIO_SRC"
+  echo "[OK] pigpio instalado a partir do código fonte."
+}
+install_pigpio
 
 # O pacote Node usa a biblioteca pigpio diretamente; o daemon pigpiod não deve estar ativo
 if systemctl is-active --quiet pigpiod 2>/dev/null; then
@@ -41,7 +62,10 @@ if systemctl is-active --quiet pigpiod 2>/dev/null; then
   systemctl stop pigpiod
   systemctl disable pigpiod
 fi
-echo "[OK] pigpio (C library) instalado"
+if command -v pigpiod &>/dev/null; then
+  killall pigpiod 2>/dev/null || true
+fi
+echo "[OK] pigpio (C library) pronto"
 
 # --- Node.js ---
 install_node() {
