@@ -8,7 +8,7 @@
  * - Modo simulado (quando `gpioset` não está disponível ou em ambiente de desenvolvimento).
  */
 
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const logger = require('./utils/logger');
 
@@ -18,6 +18,8 @@ class RelayController {
         this.relays = {};
         this.states = {};
         this.gpioByChannel = {};
+        /** Processos gpioset em background (canal -> ChildProcess). gpioset mantém o pino até o processo terminar; por isso não usamos execSync. */
+        this.gpioProcesses = {};
         this.useGpiod = process.platform === 'linux' && this.hasGpioSet();
         this.simulated = !this.useGpiod;
 
@@ -108,10 +110,22 @@ class RelayController {
         }
 
         try {
-            // Usar chip 0 (gpiochip0) e linha = número BCM do GPIO.
-            // Ex.: gpioset -c 0 19=1
-            const cmd = `gpioset -c 0 ${gpio}=${value}`;
-            execSync(cmd);
+            // gpioset mantém o pino até o processo terminar; usar execSync travaria o Node.
+            // Encerrar o processo anterior deste canal (se existir) e rodar gpioset em background.
+            const prev = this.gpioProcesses[channel];
+            if (prev && prev.pid) {
+                try {
+                    prev.kill('SIGTERM');
+                } catch (_) { /* já terminou */ }
+                delete this.gpioProcesses[channel];
+            }
+
+            const child = spawn('gpioset', ['-c', '0', `${gpio}=${value}`], {
+                detached: true,
+                stdio: 'ignore',
+            });
+            child.unref();
+            this.gpioProcesses[channel] = child;
             this.states[channel] = value;
             logger.gpio(`GPIO ${gpio} (canal ${channel}) acionado via gpioset: ${state}`);
             return true;
@@ -166,6 +180,12 @@ class RelayController {
      * Libera os recursos GPIO e limpa estado interno
      */
     cleanup() {
+        for (const [ch, child] of Object.entries(this.gpioProcesses)) {
+            try {
+                if (child && child.pid) child.kill('SIGTERM');
+            } catch (_) { /* ignore */ }
+        }
+        this.gpioProcesses = {};
         this.relays = {};
         this.states = {};
         this.gpioByChannel = {};
