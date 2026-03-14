@@ -13,7 +13,7 @@ try {
   Gpio = pigpio.Gpio;
   // Se o módulo nativo não carregou, gpioInitialise não existe e o Gpio vai falhar
   if (typeof pigpio.gpioInitialise !== 'function') {
-    console.warn('[GPIO] Módulo nativo pigpio não carregou. Execute no Raspberry: npm rebuild e reinicie o serviço. LD_LIBRARY_PATH=/usr/local/lib pode ser necessário.');
+    console.warn('[GPIO] Módulo nativo pigpio não carregou. Defina LD_LIBRARY_PATH para a pasta da lib (ex.: /opt/zaccess-device/vendor/pigpio-install/lib) e reinicie o serviço. Execute: sudo scripts/fix-service-env.sh');
     Gpio = null;
   }
 } catch (e) {
@@ -50,7 +50,7 @@ function init(channelToGpio = null) {
     } catch (err) {
       console.error(`[GPIO] Erro ao inicializar canal ${channel} (BCM ${bcm}):`, err.message);
       if (/gpioInitialise|self-register|different Node/.test(err.message)) {
-        console.error('[GPIO] Dica: no Raspberry execute "cd /opt/zaccess-device && npm rebuild" e reinicie o serviço. Se pigpio foi instalado de fonte, use LD_LIBRARY_PATH=/usr/local/lib.');
+        console.error('[GPIO] Dica: execute "sudo /opt/zaccess-device/scripts/fix-service-env.sh" para corrigir o LD_LIBRARY_PATH do serviço.');
       }
     }
   }

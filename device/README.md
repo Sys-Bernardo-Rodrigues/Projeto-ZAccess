@@ -53,6 +53,16 @@ O script:
 
 Interface web: `http://<IP-do-Raspberry>:3080`
 
+### Relés não disparam pelo frontend?
+
+Se os botões IN1–IN4 na interface não acionarem os relés, o serviço pode estar sem `LD_LIBRARY_PATH`. No Raspberry execute:
+
+```bash
+sudo /opt/zaccess-device/scripts/fix-service-env.sh
+```
+
+Depois teste de novo em `http://<IP>:3080`.
+
 ### Desinstalação
 
 ```bash
