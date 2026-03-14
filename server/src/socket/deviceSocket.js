@@ -45,6 +45,8 @@ module.exports = (io) => {
                 return;
             }
 
+            const deviceIdStr = device._id.toString();
+
             // Atualizar status do dispositivo (findByIdAndUpdate evita save() paralelo depois)
             const now = new Date();
             await Device.findByIdAndUpdate(device._id, {
@@ -71,9 +73,9 @@ module.exports = (io) => {
                 ipAddress: socket.handshake.address,
             });
 
-            // Notificar dashboard
+            // Notificar dashboard (deviceId em string para o front comparar com d._id)
             dashboardNsp.emit('device:status-change', {
-                deviceId: device._id,
+                deviceId: deviceIdStr,
                 status: 'online',
                 name: device.name,
                 timestamp: new Date(),
@@ -260,7 +262,7 @@ module.exports = (io) => {
                     });
 
                     dashboardNsp.emit('device:status-change', {
-                        deviceId: device._id,
+                        deviceId: deviceIdStr,
                         status: 'offline',
                         name: device.name,
                         timestamp: new Date(),
