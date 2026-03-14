@@ -104,6 +104,8 @@ fi
 echo "[*] Instalando dependências npm..."
 cd "$INSTALL_DIR"
 npm install --production --no-audit --no-fund
+# Recompilar módulos nativos (pigpio) para esta máquina e versão do Node
+npm rebuild
 cd "$SCRIPT_DIR"
 
 # --- Configuração inicial ---
@@ -123,6 +125,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$INSTALL_DIR
+# libpigpio pode estar em /usr/local/lib quando instalado a partir do código fonte
+Environment=LD_LIBRARY_PATH=/usr/local/lib
 ExecStart=$(command -v node) $INSTALL_DIR/src/server.js
 Restart=always
 RestartSec=10

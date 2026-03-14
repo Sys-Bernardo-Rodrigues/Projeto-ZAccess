@@ -11,6 +11,11 @@ let Gpio = null;
 try {
   pigpio = require('pigpio');
   Gpio = pigpio.Gpio;
+  // Se o módulo nativo não carregou, gpioInitialise não existe e o Gpio vai falhar
+  if (typeof pigpio.gpioInitialise !== 'function') {
+    console.warn('[GPIO] Módulo nativo pigpio não carregou. Execute no Raspberry: npm rebuild e reinicie o serviço. LD_LIBRARY_PATH=/usr/local/lib pode ser necessário.');
+    Gpio = null;
+  }
 } catch (e) {
   Gpio = null;
 }
@@ -44,6 +49,9 @@ function init(channelToGpio = null) {
       pins[Number(channel)] = pin;
     } catch (err) {
       console.error(`[GPIO] Erro ao inicializar canal ${channel} (BCM ${bcm}):`, err.message);
+      if (/gpioInitialise|self-register|different Node/.test(err.message)) {
+        console.error('[GPIO] Dica: no Raspberry execute "cd /opt/zaccess-device && npm rebuild" e reinicie o serviço. Se pigpio foi instalado de fonte, use LD_LIBRARY_PATH=/usr/local/lib.');
+      }
     }
   }
 }
