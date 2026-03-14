@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # ZAccess Device — Instalação no Raspberry Pi 4 + Raspberry OS (Bookworm/Lite)
-# Instala Node.js, pigpio (C library), copia a aplicação para /opt e configura o serviço systemd.
-# GPIO: 4 relés via pigpio (/dev/gpiomem). Não usa gpiod/gpiochip.
+# Instala Node.js, compila pigpio a partir da pasta device (vendor/pigpio) e configura o serviço systemd.
+# GPIO: 4 relés via pigpio. A biblioteca fica em vendor/pigpio-install dentro do device.
 # Uso: sudo ./install.sh
 #
 
@@ -12,6 +12,7 @@ INSTALL_DIR="/opt/zaccess-device"
 SERVICE_NAME="zaccess-device"
 NODE_VERSION_REQUIRED="18"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PIGPIO_REPO="https://github.com/joan2937/pigpio.git"
 
 # --- Verificações iniciais ---
 if [ "$(id -u)" -ne 0 ]; then
@@ -29,43 +30,18 @@ echo "  ZAccess Device — Instalação"
 echo "  (Raspberry Pi 4 + Raspberry OS)"
 echo "=============================================="
 
-# --- Atualizar e instalar dependências do sistema ---
-echo "[*] Atualizando pacotes e instalando rsync..."
+# --- Dependências do sistema ---
+echo "[*] Atualizando pacotes e instalando rsync + build-essential + git..."
 apt-get update -qq
-apt-get install -y -qq rsync
+apt-get install -y -qq rsync build-essential git
 
-# pigpio C library — necessário para o pacote Node; em alguns sistemas não existe pacote apt
-install_pigpio() {
-  if apt-get install -y -qq pigpio 2>/dev/null; then
-    echo "[OK] pigpio instalado via apt."
-    return 0
-  fi
-  if apt-get install -y -qq pigpio-tools 2>/dev/null; then
-    echo "[OK] pigpio-tools instalado via apt."
-    return 0
-  fi
-  echo "[*] pigpio não encontrado nos repositórios. A instalar a partir do código fonte..."
-  apt-get install -y -qq build-essential git
-  local PIGPIO_SRC="/tmp/pigpio-build"
-  rm -rf "$PIGPIO_SRC"
-  git clone --depth 1 https://github.com/joan2937/pigpio.git "$PIGPIO_SRC"
-  (cd "$PIGPIO_SRC" && make && make install)
-  ldconfig 2>/dev/null || true
-  rm -rf "$PIGPIO_SRC"
-  echo "[OK] pigpio instalado a partir do código fonte."
-}
-install_pigpio
-
-# O pacote Node usa a biblioteca pigpio diretamente; o daemon pigpiod não deve estar ativo
+# --- Parar pigpiod se existir (o dispositivo usa a biblioteca diretamente) ---
 if systemctl is-active --quiet pigpiod 2>/dev/null; then
-  echo "[*] Parando e desativando pigpiod (o dispositivo usa a biblioteca diretamente)..."
+  echo "[*] Parando e desativando pigpiod..."
   systemctl stop pigpiod
   systemctl disable pigpiod
 fi
-if command -v pigpiod &>/dev/null; then
-  killall pigpiod 2>/dev/null || true
-fi
-echo "[OK] pigpio (C library) pronto"
+killall pigpiod 2>/dev/null || true
 
 # --- Node.js ---
 install_node() {
@@ -93,6 +69,7 @@ install_node
 echo "[*] Instalando aplicação em $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 rsync -a --exclude='node_modules' --exclude='.git' --exclude='config.json' --exclude='*.log' \
+  --exclude='vendor/pigpio-install' \
   "$SCRIPT_DIR/" "$INSTALL_DIR/"
 chown -R root:root "$INSTALL_DIR"
 if getent group gpio &>/dev/null; then
@@ -100,11 +77,40 @@ if getent group gpio &>/dev/null; then
   chmod -R g+rX "$INSTALL_DIR"
 fi
 
+# --- pigpio: usar fonte em vendor/pigpio (na pasta device) ---
+PIGPIO_SRC="$INSTALL_DIR/vendor/pigpio"
+PIGPIO_INSTALL="$INSTALL_DIR/vendor/pigpio-install"
+
+if [ ! -f "$PIGPIO_SRC/Makefile" ]; then
+  echo "[*] A clonar pigpio para $PIGPIO_SRC..."
+  mkdir -p "$(dirname "$PIGPIO_SRC")"
+  rm -rf "$PIGPIO_SRC"
+  git clone --depth 1 "$PIGPIO_REPO" "$PIGPIO_SRC"
+fi
+
+echo "[*] A compilar e instalar pigpio em $PIGPIO_INSTALL..."
+mkdir -p "$PIGPIO_INSTALL"
+(cd "$PIGPIO_SRC" && make)
+# make install com prefix local; o passo Python pode falhar (distutils) — ignoramos
+(cd "$PIGPIO_SRC" && make install prefix="$PIGPIO_INSTALL" DESTDIR=) 2>/dev/null || true
+# Se o install falhou no Python, instalar só as libs manualmente
+if [ ! -f "$PIGPIO_INSTALL/lib/libpigpio.so" ] && [ ! -f "$PIGPIO_INSTALL/lib/libpigpio.so.1" ]; then
+  mkdir -p "$PIGPIO_INSTALL/lib" "$PIGPIO_INSTALL/include"
+  cp -a "$PIGPIO_SRC/libpigpio.so.1" "$PIGPIO_SRC/libpigpio.so" "$PIGPIO_INSTALL/lib/" 2>/dev/null || true
+  cp -a "$PIGPIO_SRC/pigpio.h" "$PIGPIO_INSTALL/include/" 2>/dev/null || true
+  (cd "$PIGPIO_INSTALL/lib" && ln -sf libpigpio.so.1 libpigpio.so 2>/dev/null)
+fi
+
+if [ ! -f "$PIGPIO_INSTALL/lib/libpigpio.so" ] && [ ! -f "$PIGPIO_INSTALL/lib/libpigpio.so.1" ]; then
+  echo "[ERRO] Não foi possível instalar libpigpio em $PIGPIO_INSTALL/lib"
+  exit 1
+fi
+echo "[OK] pigpio instalado em $PIGPIO_INSTALL"
+
 # --- Dependências npm ---
 echo "[*] Instalando dependências npm..."
 cd "$INSTALL_DIR"
 npm install --production --no-audit --no-fund
-# Recompilar módulos nativos (pigpio) para esta máquina e versão do Node
 npm rebuild
 cd "$SCRIPT_DIR"
 
@@ -114,7 +120,7 @@ if [ ! -f "$INSTALL_DIR/config.json" ]; then
   echo "[*] config.json criado. Configure pela interface web (http://<IP>:3080)."
 fi
 
-# --- Serviço systemd ---
+# --- Serviço systemd (LD_LIBRARY_PATH aponta para a lib dentro do device) ---
 echo "[*] Configurando serviço systemd..."
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" << EOF
 [Unit]
@@ -125,8 +131,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$INSTALL_DIR
-# libpigpio pode estar em /usr/local/lib quando instalado a partir do código fonte
-Environment=LD_LIBRARY_PATH=/usr/local/lib
+Environment=LD_LIBRARY_PATH=$PIGPIO_INSTALL/lib
 ExecStart=$(command -v node) $INSTALL_DIR/src/server.js
 Restart=always
 RestartSec=10
@@ -150,6 +155,7 @@ echo "=============================================="
 echo ""
 echo "  Serviço: $SERVICE_NAME"
 echo "  Diretório: $INSTALL_DIR"
+echo "  pigpio: $PIGPIO_INSTALL/lib"
 echo "  Interface: http://<IP-deste-Raspberry>:3080"
 echo ""
 echo "  Comandos:"

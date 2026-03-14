@@ -35,3 +35,5 @@ OPENAPI_TODO.local.md
 
 # Device (Raspberry) — config com token não versionado
 device/config.json
+# pigpio instalado localmente na pasta device (build output)
+device/vendor/pigpio-install/

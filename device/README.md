@@ -17,9 +17,22 @@ Sistema que roda no Raspberry Pi: conecta ao servidor ZAccess via Socket.IO e co
 ## Requisitos
 
 - Node.js 18+
-- **Raspberry Pi 4 Model B** com **Raspberry OS** — o código usa **pigpio** (acesso via `/dev/gpiomem`), evitando o erro "device or resource busy" do gpiochip.
-- Pacote do sistema: **pigpio** (o `install.sh` instala; manual: `sudo apt install pigpio`). O daemon `pigpiod` não deve estar ativo (o Node usa a biblioteca diretamente).
+- **Raspberry Pi 4 Model B** com **Raspberry OS** — o código usa **pigpio** (acesso via `/dev/gpiomem`).
+- A biblioteca pigpio é compilada **dentro da pasta do device** (`vendor/pigpio` → `vendor/pigpio-install`); o `install.sh` clona o repositório [joan2937/pigpio](https://github.com/joan2937/pigpio) se não existir.
+- O daemon `pigpiod` não deve estar ativo (o Node usa a biblioteca diretamente).
 - Módulo 4 relés com entradas ópticas (IN1–IN4, GND, VCC, JD-VCC).
+
+## Opcional: ter o pigpio já na pasta device
+
+Para incluir o código fonte do pigpio no teu repositório (evita clonar durante o install):
+
+```bash
+cd device
+mkdir -p vendor
+git clone --depth 1 https://github.com/joan2937/pigpio.git vendor/pigpio
+```
+
+O `install.sh` usa `vendor/pigpio` se existir; caso contrário clona-o em `/opt/zaccess-device/vendor/pigpio`.
 
 ## Instalação no Raspberry (recomendado: script)
 
@@ -31,10 +44,11 @@ sudo ./install.sh
 ```
 
 O script:
-- Instala **Node.js 20 LTS** (NodeSource) se ainda não existir
+- Instala **Node.js 20 LTS** (NodeSource) e **build-essential** + **git** se necessário
 - Copia a aplicação para **/opt/zaccess-device**
-- Instala dependências npm
-- Cria o serviço systemd **zaccess-device** (inicia no boot e reinicia em falha)
+- Clona **pigpio** para `vendor/pigpio` (se ainda não existir), compila e instala em **vendor/pigpio-install** (lib dentro do device)
+- Instala dependências npm e faz **npm rebuild**
+- Cria o serviço systemd **zaccess-device** com `LD_LIBRARY_PATH` apontando para `vendor/pigpio-install/lib`
 - Inicia o serviço
 
 Interface web: `http://<IP-do-Raspberry>:3080`
