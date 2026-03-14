@@ -172,10 +172,10 @@ exports.sendCommand = async (req, res, next) => {
             return apiResponse(res, 400, null, 'Dispositivo está offline.');
         }
 
-        // Enviar comando via Socket.IO
+        // Enviar comando via Socket.IO (dispositivos no namespace /devices)
         const io = req.app.get('io');
         if (device.socketId) {
-            io.to(device.socketId).emit('device:command', {
+            io.of('/devices').to(device.socketId).emit('device:command', {
                 command,
                 payload,
                 timestamp: new Date().toISOString(),

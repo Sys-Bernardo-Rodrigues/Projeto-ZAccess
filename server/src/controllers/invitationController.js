@@ -161,9 +161,9 @@ exports.unlockByInvitation = async (req, res, next) => {
             return apiResponse(res, 503, null, 'Houve um erro: Sem conexão com o gateway.');
         }
 
-        // Toggle command
+        // Toggle command (dispositivos conectam no namespace /devices)
         const newState = 'open'; // Pulse mode usually opens and then closes
-        io.to(device.socketId).emit('relay:toggle', {
+        io.of('/devices').to(device.socketId).emit('relay:toggle', {
             relayId: relay._id,
             channel: relay.channel,
             gpioPin: relay.gpioPin,

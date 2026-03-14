@@ -221,7 +221,7 @@ exports.toggleRelay = async (req, res, next) => {
         const newState = relay.state === 'closed' ? 'open' : 'closed';
         const io = req.app.get('io');
 
-        io.to(device.socketId).emit('relay:toggle', {
+        io.of('/devices').to(device.socketId).emit('relay:toggle', {
             relayId: relay._id,
             channel: relay.channel,
             gpioPin: relay.gpioPin,
