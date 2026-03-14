@@ -33,13 +33,16 @@ function setChannelMap(channelToGpio) {
 }
 
 /**
- * Escreve no pino via gpioset. Sem -m (algumas versões do gpiod não têm -m exit).
- * Sintaxe: gpioset <chip> <line>=<value>
+ * Escreve no pino via gpioset.
+ * Sintaxe conforme a versão do gpiod no sistema:
+ * - Algumas: gpioset <chip> <line>=<value>
+ * - Outras (ex.: Raspberry OS): gpioset <chip> <line> <value> (três argumentos)
  */
 function gpioWrite(bcm, value) {
   if (!hasGpiod) return { ok: false, error: 'gpioset não disponível' };
   const v = value ? 1 : 0;
-  const r = spawnSync('gpioset', [GPIO_CHIP, `${bcm}=${v}`], {
+  const args = [GPIO_CHIP, String(bcm), String(v)];
+  const r = spawnSync('gpioset', args, {
     encoding: 'utf8',
     timeout: 2000,
   });
