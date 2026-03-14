@@ -1,11 +1,11 @@
 /**
- * Controle dos 4 relés via GPIO — Raspberry Pi 4 Model B + Raspberry OS (Bookworm+).
- * Usa gpiod (gpioset) — a interface sysfs foi removida no kernel recente.
- * Módulo 4 relés: IN1→BCM5, IN2→BCM6, IN3→BCM13, IN4→BCM19
- * GND→pin20, VCC→17 (3.3V), JD-VCC→pin2 (5V)
+ * Controle dos 4 relés via gpioset (libgpiod v2).
+ * - Não usar -z (daemonize): o processo fica a segurar a linha e o próximo gpioset dá "device busy".
+ * - setRelay / init / close: gpioset -c chip -t 0,0 line=value (define e sai logo).
+ * - pulseRelay: gpioset -c chip -t durationMs,0 line=1 (liga, espera, faz toggle para 0, sai).
  */
 
-const { spawnSync } = require('child_process');
+const { spawnSync, spawn } = require('child_process');
 
 const CHANNEL_TO_BCM = {
   1: 5,
@@ -14,7 +14,7 @@ const CHANNEL_TO_BCM = {
   4: 19,
 };
 
-const GPIO_CHIP = 'gpiochip0'; // Raspberry Pi 4
+const GPIO_CHIP = 'gpiochip0';
 let customMap = null;
 
 function useGpiod() {
@@ -26,20 +26,12 @@ function useGpiod() {
 const hasGpiod = useGpiod();
 
 /**
- * Define o mapa de canais (BCM). Chamado por init().
- */
-function setChannelMap(channelToGpio) {
-  customMap = channelToGpio || CHANNEL_TO_BCM;
-}
-
-/**
- * Escreve no pino via gpioset.
- * Nesta versão do gpiod a linha vem primeiro: gpioset <line> <value>
+ * Define valor e sai imediatamente (sem segurar a linha): -t 0,0
  */
 function gpioWrite(bcm, value) {
   if (!hasGpiod) return { ok: false, error: 'gpioset não disponível' };
   const v = value ? 1 : 0;
-  const args = [String(bcm), String(v)];
+  const args = ['-c', GPIO_CHIP, '-t', '0,0', `${bcm}=${v}`];
   const r = spawnSync('gpioset', args, {
     encoding: 'utf8',
     timeout: 2000,
@@ -51,8 +43,7 @@ function gpioWrite(bcm, value) {
 }
 
 /**
- * Inicializa o mapa de canais. Com gpiod não há “export”; só guardamos o mapa.
- * @param {Object} channelToGpio - ex: { 1: 5, 2: 6, 3: 13, 4: 19 }
+ * Inicializa o mapa de canais e deixa todos em 0.
  */
 function init(channelToGpio = null) {
   const map = channelToGpio || CHANNEL_TO_BCM;
@@ -63,15 +54,11 @@ function init(channelToGpio = null) {
     console.warn('[GPIO] gpioset não encontrado. Instale: sudo apt install gpiod');
     return;
   }
-  // Deixar todos em 0 (relé desligado) ao iniciar
   for (const bcm of Object.values(customMap)) {
     gpioWrite(bcm, false);
   }
 }
 
-/**
- * Nada a liberar com gpiod (cada gpioset -m exit sai logo).
- */
 function close() {
   const map = customMap || CHANNEL_TO_BCM;
   for (const bcm of Object.values(map)) {
@@ -80,9 +67,7 @@ function close() {
 }
 
 /**
- * Ativa (1) ou desativa (0) um canal.
- * @param {number} channel - 1 a 4
- * @param {boolean} on - true = relé ativo
+ * Ativa (1) ou desativa (0) um canal. Usa -t 0,0 para não segurar a linha.
  */
 function setRelay(channel, on) {
   const ch = Number(channel);
@@ -99,18 +84,27 @@ function setRelay(channel, on) {
 }
 
 /**
- * Pulso no relé: liga, espera durationMs, desliga.
- * @param {number} channel - 1 a 4
- * @param {number} durationMs - duração em ms
- * @returns {Promise<void>}
+ * Pulso: um único gpioset com -t durationMs,0 (liga, espera, faz toggle para 0, sai).
+ * Não usa dois processos, evita "device busy".
  */
 function pulseRelay(channel, durationMs = 1000) {
-  return new Promise((resolve) => {
-    setRelay(channel, true);
-    setTimeout(() => {
-      setRelay(channel, false);
+  const map = customMap || CHANNEL_TO_BCM;
+  const bcm = map[Number(channel)];
+  if (bcm == null) {
+    return Promise.resolve();
+  }
+  const duration = Math.max(100, durationMs);
+  return new Promise((resolve, reject) => {
+    const child = spawn('gpioset', ['-c', GPIO_CHIP, '-t', `${duration},0`, `${bcm}=1`], {
+      stdio: 'ignore',
+    });
+    child.on('error', (err) => {
+      console.error('[GPIO] pulseRelay spawn error:', err.message);
+      reject(err);
+    });
+    child.on('exit', (code) => {
       resolve();
-    }, Math.max(100, durationMs));
+    });
   });
 }
 
