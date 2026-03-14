@@ -150,6 +150,8 @@
         .relay-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
         .relay-chip { padding: 8px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; }
         .relay-chip strong { color: var(--primary); }
+        .relay-chip--control { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .relay-chip--control .relay-action { flex-shrink: 0; }
         /* Diagrama: placa + relés + sensores */
         .diagram-wrap { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; margin-top: 16px; }
         .diagram-board {
@@ -461,16 +463,18 @@
                 const relayChannels = data.relayChannels || {};
                 const r = data.relayStates || {};
                 const relayListEl = document.getElementById('relayList');
-                if (!Object.keys(r).length) {
-                    relayListEl.innerHTML = 'Nenhum relé configurado.';
+                // Sempre mostrar IN1–IN4 a partir do config (relayChannels), para poder abrir relé pelo painel local
+                const channels = Object.entries(relayChannels).sort((a, b) => Number(a[0]) - Number(b[0]));
+                if (!channels.length) {
+                    relayListEl.innerHTML = 'Nenhum canal configurado (verifique config do dispositivo).';
                 } else {
-                    relayListEl.innerHTML = Object.entries(r).map(([ch, st]) => {
-                        const gpio = relayChannels[ch] != null ? relayChannels[ch] : '?';
+                    relayListEl.innerHTML = channels.map(([ch, gpio]) => {
+                        const st = r[ch] || 'closed';
                         const isOn = st === 'open';
                         const label = `IN${ch}`;
                         const btnLabel = isOn ? 'Desligar' : 'Ligar';
                         const target = isOn ? 'closed' : 'open';
-                        return `<div class="relay-chip">
+                        return `<div class="relay-chip relay-chip--control">
                             <span>${label} · Canal ${ch} · GPIO ${gpio}: <strong>${st}</strong></span>
                             <button type="button" class="btn btn-primary btn-small relay-action" data-channel="${ch}" data-target="${target}">
                                 ${btnLabel}
@@ -478,7 +482,6 @@
                         </div>`;
                     }).join('');
 
-                    // Rebind ações locais
                     document.querySelectorAll('.relay-action').forEach((btn) => {
                         btn.onclick = () => {
                             const ch = Number(btn.dataset.channel);
@@ -489,14 +492,14 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ channel: ch, targetState }),
                             })
-                                .then((r) => r.json())
+                                .then((res) => res.json())
                                 .then((resp) => {
                                     if (resp.error) throw new Error(resp.error);
-                                    toast(`Relé IN${ch} -> ${targetState === 'open' ? 'Ligado' : 'Desligado'}`, 'success');
+                                    toast(`Relé IN${ch} ${targetState === 'open' ? 'ligado' : 'desligado'}`, 'success');
                                     fetchStatus();
                                 })
                                 .catch((err) => {
-                                    toast(err.message || 'Erro ao acionar relé local.', 'error');
+                                    toast(err.message || 'Erro ao acionar relé.', 'error');
                                 })
                                 .finally(() => {
                                     btn.disabled = false;
