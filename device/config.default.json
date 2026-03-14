@@ -1,0 +1,16 @@
+{
+  "server": {
+    "url": "http://localhost:5000",
+    "serialNumber": "",
+    "authToken": ""
+  },
+  "gpio": {
+    "relays": {
+      "1": 5,
+      "2": 6,
+      "3": 13,
+      "4": 19
+    }
+  },
+  "autoConnect": false
+}

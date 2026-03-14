@@ -32,3 +32,6 @@ coverage/
 
 # Local docs / notas (não versionar)
 OPENAPI_TODO.local.md
+
+# Device (Raspberry) — config com token não versionado
+device/config.json

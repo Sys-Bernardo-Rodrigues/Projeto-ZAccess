@@ -1,0 +1,17 @@
+{
+  "name": "zaccess-device",
+  "version": "1.0.0",
+  "description": "ZAccess - Agente Raspberry Pi (4 relés) + frontend de configuração",
+  "main": "src/agent.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "agent": "node src/agent.js",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io-client": "^4.8.1",
+    "onoff": "^6.0.3"
+  }
+}

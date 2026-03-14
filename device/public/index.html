@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZAccess — Configuração do Dispositivo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a22;
+      --border: #2a3040;
+      --text: #e6e9f0;
+      --text-muted: #8b90a0;
+      --accent: #00c896;
+      --accent-dim: #00a87a;
+      --danger: #e85555;
+      --warning: #e8a855;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h1 span.icon { color: var(--accent); }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    input[type="text"],
+    input[type="url"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 200, 150, 0.15);
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .checkbox-row input { width: auto; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.05s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .btn-primary:hover { background: var(--accent-dim); }
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #353d50; }
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    .status-bar.connected { background: rgba(0, 200, 150, 0.12); border: 1px solid rgba(0, 200, 150, 0.3); }
+    .status-bar.disconnected { background: rgba(43, 48, 64, 0.6); border: 1px solid var(--border); }
+    .status-bar.error { background: rgba(232, 85, 85, 0.12); border: 1px solid rgba(232, 85, 85, 0.3); }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: none;
+    }
+    .status-bar.connected .status-dot { background: var(--accent); animation: pulse 2s infinite; }
+    .status-bar.error .status-dot { background: var(--danger); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .pin-map {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+    .pin-map div { margin: 0.2rem 0; }
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span class="icon">◆</span> ZAccess Device</h1>
+    <p class="subtitle">Configure a conexão com o servidor e os relés (Raspberry Pi — 4 canais).</p>
+
+    <div id="statusBar" class="status-bar disconnected">
+      <span class="status-dot"></span>
+      <span id="statusText">Desconectado</span>
+    </div>
+
+    <div class="card">
+      <h2>Conexão com o servidor</h2>
+      <div class="form-group">
+        <label for="serverUrl">URL do servidor</label>
+        <input type="url" id="serverUrl" placeholder="https://seu-servidor.com ou http://192.168.1.10:5000" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="serialNumber">Número de série</label>
+        <input type="text" id="serialNumber" placeholder="Ex: RPi4-A1B2C3D4" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="authToken">Token de autenticação</label>
+        <input type="password" id="authToken" placeholder="Token gerado no painel ao cadastrar o dispositivo" autocomplete="off">
+      </div>
+      <p class="subtitle" style="font-size: 0.8rem; margin-top: 0.5rem;">
+        Obtenha o número de série e o token no painel do servidor (Dispositivos → Adicionar dispositivo).
+      </p>
+      <div class="checkbox-row">
+        <input type="checkbox" id="autoConnect">
+        <label for="autoConnect" style="margin:0;">Conectar automaticamente ao iniciar</label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="btnSave">Salvar configuração</button>
+        <button type="button" class="btn btn-primary" id="btnConnect">Conectar</button>
+        <button type="button" class="btn btn-danger" id="btnDisconnect">Desconectar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>GPIO — Módulo 4 relés</h2>
+      <p class="subtitle" style="font-size: 0.85rem; margin-bottom: 0.5rem;">
+        Ligação no Raspberry: IN1→GPIO5, IN2→GPIO6, IN3→GPIO13, IN4→GPIO19. GND→pin 20, VCC→17, JD-VCC→2.
+      </p>
+      <div class="pin-map">
+        <div>Canal 1 → BCM 5 (físico 29)</div>
+        <div>Canal 2 → BCM 6 (físico 31)</div>
+        <div>Canal 3 → BCM 13 (físico 33)</div>
+        <div>Canal 4 → BCM 19 (físico 35)</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const serverUrl = document.getElementById('serverUrl');
+    const serialNumber = document.getElementById('serialNumber');
+    const authToken = document.getElementById('authToken');
+    const autoConnect = document.getElementById('autoConnect');
+    const statusBar = document.getElementById('statusBar');
+    const statusText = document.getElementById('statusText');
+    const btnSave = document.getElementById('btnSave');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function setStatus(connected, message, isError) {
+      statusBar.className = 'status-bar ' + (isError ? 'error' : connected ? 'connected' : 'disconnected');
+      statusText.textContent = message || (connected ? 'Conectado ao servidor' : 'Desconectado');
+    }
+
+    async function loadConfig() {
+      const r = await fetch('/api/config');
+      const data = await r.json();
+      if (data.success && data.config) {
+        const s = data.config.server || {};
+        serverUrl.value = s.url || '';
+        serialNumber.value = s.serialNumber || '';
+        authToken.value = s.authToken || '';
+        autoConnect.checked = !!data.config.autoConnect;
+      }
+    }
+
+    async function fetchStatus() {
+      const r = await fetch('/api/status');
+      const data = await r.json();
+      if (data.success) {
+        setStatus(data.connected, data.detail || (data.connected ? 'Conectado ao servidor' : 'Desconectado'), data.status === 'error');
+      }
+    }
+
+    btnSave.addEventListener('click', async () => {
+      const r = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          server: { url: serverUrl.value.trim(), serialNumber: serialNumber.value.trim(), authToken: authToken.value.trim() },
+          autoConnect: autoConnect.checked,
+        }),
+      });
+      const data = await r.json();
+      if (data.success) {
+        showToast('Configuração salva.');
+      } else {
+        showToast(data.message || 'Erro ao salvar.');
+      }
+    });
+
+    btnConnect.addEventListener('click', async () => {
+      const r = await fetch('/api/connect', { method: 'POST' });
+      const data = await r.json();
+      if (data.success) {
+        showToast(data.connected ? 'Conectado.' : 'Conectando...');
+        setTimeout(fetchStatus, 1500);
+      } else {
+        showToast(data.message || 'Falha ao conectar.');
+        setStatus(false, data.message, true);
+      }
+    });
+
+    btnDisconnect.addEventListener('click', async () => {
+      await fetch('/api/disconnect', { method: 'POST' });
+      showToast('Desconectado.');
+      setStatus(false, 'Desconectado');
+    });
+
+    loadConfig();
+    fetchStatus();
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>
