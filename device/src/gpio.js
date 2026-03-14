@@ -33,12 +33,13 @@ function setChannelMap(channelToGpio) {
 }
 
 /**
- * Escreve no pino via gpioset (modo exit: define e sai; o pino mantém o valor).
+ * Escreve no pino via gpioset. Sem -m (algumas versões do gpiod não têm -m exit).
+ * Sintaxe: gpioset <chip> <line>=<value>
  */
 function gpioWrite(bcm, value) {
   if (!hasGpiod) return { ok: false, error: 'gpioset não disponível' };
   const v = value ? 1 : 0;
-  const r = spawnSync('gpioset', ['-m', 'exit', GPIO_CHIP, `${bcm}=${v}`], {
+  const r = spawnSync('gpioset', [GPIO_CHIP, `${bcm}=${v}`], {
     encoding: 'utf8',
     timeout: 2000,
   });
