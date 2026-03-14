@@ -32,14 +32,12 @@ echo "=============================================="
 echo "[*] Atualizando pacotes e instalando rsync + gpiod..."
 apt-get update -qq
 apt-get install -y -qq rsync
-# gpiod é obrigatório para GPIO no Pi 4 (interface gpioset; sysfs foi removida)
-apt-get install -y -qq gpiod
-
-if ! command -v gpioset &>/dev/null; then
-  echo "[ERRO] gpioset não encontrado após instalar gpiod. Verifique: sudo apt install gpiod"
-  exit 1
-fi
-echo "[OK] gpiod instalado ($(gpioset --version 2>/dev/null || true))"
+# pigpio C library — acesso GPIO via /dev/gpiomem (evita conflito "device busy" do gpiochip)
+apt-get install -y -qq pigpio
+# Não usar o daemon pigpiod; o pacote Node usa a biblioteca diretamente (um único processo)
+systemctl stop pigpiod 2>/dev/null || true
+systemctl disable pigpiod 2>/dev/null || true
+echo "[OK] pigpio (C library) instalado"
 
 # --- Node.js ---
 install_node() {

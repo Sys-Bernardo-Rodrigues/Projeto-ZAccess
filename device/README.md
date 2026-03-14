@@ -17,8 +17,8 @@ Sistema que roda no Raspberry Pi: conecta ao servidor ZAccess via Socket.IO e co
 ## Requisitos
 
 - Node.js 18+
-- **Raspberry Pi 4 Model B** com **Raspberry OS (Bookworm+)** — o código usa **gpiod** (`gpioset`), pois a interface sysfs GPIO foi removida no kernel recente.
-- Pacote do sistema: **gpiod** (o `install.sh` instala automaticamente; manual: `sudo apt install gpiod`).
+- **Raspberry Pi 4 Model B** com **Raspberry OS** — o código usa **pigpio** (acesso via `/dev/gpiomem`), evitando o erro "device or resource busy" do gpiochip.
+- Pacote do sistema: **pigpio** (o `install.sh` instala; manual: `sudo apt install pigpio`). O daemon `pigpiod` não deve estar ativo (o Node usa a biblioteca diretamente).
 - Módulo 4 relés com entradas ópticas (IN1–IN4, GND, VCC, JD-VCC).
 
 ## Instalação no Raspberry (recomendado: script)
