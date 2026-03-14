@@ -107,6 +107,9 @@ fi
 USER_RUN="${SUDO_USER:-$USER}"
 NODE_PATH=$(which node)
 
+info "Ajustando permissões da pasta de instalação para o usuário ${USER_RUN}..."
+chown -R "$USER_RUN":"$USER_RUN" "$INSTALL_DIR"
+
 info "Criando serviço systemd: $SERVICE_FILE"
 info "  Diretório: $INSTALL_DIR"
 info "  Usuário:   $USER_RUN"
