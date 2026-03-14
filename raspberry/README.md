@@ -9,25 +9,27 @@ Cliente que roda **apenas no Raspberry Pi**. O servidor fica **remoto** — não
 
 ## Pré-requisitos no Pi
 
-- Raspberry Pi 4 (ou 3)
-- Node.js 18+
+- Raspberry Pi 4 (ou 3) com **Raspberry Pi OS**
 - **Módulo de Relé de 4 Canais** (compatível com a configuração padrão)
 - Internet (para conectar ao servidor remoto)
+- *(Opcional)* Node.js 18+ já instalado; caso contrário, o script de instalação instala Node.js 20 automaticamente.
 
 ## Instalação rápida no Raspberry (recomendado: script + serviço)
 
-1. **Copie apenas a pasta `raspberry`** para o Pi (ex.: `/home/pi/zaccess`).
+1. **Copie apenas a pasta `raspberry`** para o Pi (ex.: `/home/pi/zaccess`). Não copie `node_modules`.
 
-2. **Execute o script de instalação** (configura .env, dependências e serviço automático):
+2. **Execute o script de instalação** (instala o necessário e configura o serviço):
    ```bash
    cd /home/pi/zaccess   # ou o caminho onde colocou a pasta
    chmod +x install-pi.sh
    ./install-pi.sh
    ```
-   O script vai:
-   - Criar `.env` a partir de `.env.example` se não existir (e pedir para você editar)
-   - Rodar `npm install`
-   - Instalar e ativar o serviço **zaccess** (inicia no boot e reinicia se cair)
+   O script pede **sudo** e faz em sequência:
+   - **Dependências do sistema:** `curl`, `build-essential`, `python3`, `git` (para compilar módulos nativos)
+   - **Node.js 20** (NodeSource), se não estiver instalado ou se a versão for menor que 18
+   - **Diretório `data/`** para SQLite
+   - **`npm install --production`** (better-sqlite3, onoff, etc.)
+   - **Serviço systemd** `zaccess` (inicia no boot e reinicia se cair)
 
 3. **Configure pelo painel web** (recomendado):
    - Acesse **http://IP_DO_RASPBERRY:5080**
@@ -109,12 +111,22 @@ O código e o `.env` continuam na pasta; use `./install-pi.sh` para reinstalar.
 
 ## Conexão de relés (GPIO) – Módulo de 4 Canais
 
-| Canal | GPIO Pin (BCM) |
-|-------|----------------|
-| 1     | 17             |
-| 2     | 18             |
-| 3     | 27             |
-| 4     | 22             |
+**Alimentação do módulo (BCM):**
+
+| Sinal   | GPIO (BCM) |
+|---------|------------|
+| VCC     | 17         |
+| JD-VCC  | 4          |
+| GND     | 20         |
+
+**Entradas de controle (IN1–IN4):**
+
+| Canal | Sinal | GPIO Pin (BCM) |
+|-------|-------|----------------|
+| 1     | IN1   | 29             |
+| 2     | IN2   | 31             |
+| 3     | IN3   | 33             |
+| 4     | IN4   | 35             |
 
 - Use um **módulo de relé de 4 canais**. O mapeamento está em `src/config.js` (`channelToGpio`); altere só se sua fiação for diferente.
 - Relés em contato seco (NO/NC).

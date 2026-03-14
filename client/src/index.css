@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ============================================
-   CSS Custom Properties - Design System
+   CSS Custom Properties - Design System (tema escuro padrão)
    ============================================ */
 :root {
   /* Colors - Dark Theme */
@@ -67,6 +67,31 @@
   /* Layout */
   --sidebar-width: 224px;
   --header-height: 72px;
+}
+
+/* Tema claro – sobrescreve apenas as cores principais */
+[data-theme='light'] {
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f9fafb;
+  --bg-input: #f3f4f6;
+  --bg-glass: rgba(255, 255, 255, 0.8);
+
+  --text-primary: #0f172a;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-accent: #4f46e5;
+
+  --border-color: rgba(148, 163, 184, 0.6);
+  --border-color-hover: rgba(107, 114, 128, 0.8);
+
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 10px 20px rgba(15, 23, 42, 0.15);
+
+  --gradient-dark: linear-gradient(135deg, #e5e7eb 0%, #ffffff 100%);
+  --gradient-card: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(217, 70, 239, 0.03) 100%);
 }
 
 /* ============================================
@@ -205,14 +230,14 @@ a:hover {
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-md);
+  gap: var(--space-sm);
+  padding: 8px var(--space-md);
   border-radius: var(--border-radius-md);
   color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
   transition: all var(--transition-fast);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   position: relative;
   overflow: hidden;
 }

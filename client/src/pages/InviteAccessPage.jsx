@@ -190,7 +190,7 @@ export default function InviteAccessPage() {
                     <div className="brand-icon">
                         <Zap size={32} fill="white" color="white" />
                     </div>
-                    <h1>ZAcesss<span>.</span></h1>
+                    <h1>ZAccess<span>.</span></h1>
                 </div>
 
                 <div className="guest-header">

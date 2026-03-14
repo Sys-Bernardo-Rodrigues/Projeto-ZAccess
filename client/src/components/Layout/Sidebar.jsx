@@ -96,7 +96,7 @@ export default function Sidebar() {
                         lineHeight: 1.1,
                         textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                     }}>
-                        ZAcesss<span style={{ color: 'var(--accent-primary-light)' }}>.</span>
+                        ZAccess<span style={{ color: 'var(--accent-primary-light)' }}>.</span>
                     </h1>
                     <div style={{
                         display: 'flex',
@@ -146,7 +146,7 @@ export default function Sidebar() {
                 )}
             </nav>
 
-            <div className="sidebar-footer" style={{ padding: '20px 12px', borderTop: '1px solid var(--border-color)' }}>
+            <div className="sidebar-footer" style={{ padding: '12px 10px', borderTop: '1px solid var(--border-color)' }}>
                 <button
                     className="btn-logout"
                     onClick={logout}
@@ -155,14 +155,14 @@ export default function Sidebar() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '10px',
-                        padding: '12px',
-                        borderRadius: '12px',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
                         background: 'rgba(239, 68, 68, 0.08)',
                         border: '1px solid rgba(239, 68, 68, 0.1)',
                         color: 'var(--accent-danger)',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
                         transition: 'all 0.2s',
                         cursor: 'pointer'
                     }}

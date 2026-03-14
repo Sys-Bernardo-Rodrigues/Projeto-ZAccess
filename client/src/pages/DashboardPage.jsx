@@ -160,7 +160,7 @@ export default function DashboardPage() {
                     {loading ? (
                         <div className="skeleton skeleton-text" style={{ width: '300px', height: 16, background: 'rgba(255,255,255,0.1)' }} />
                     ) : (
-                        <p>O sistema ZAcesss está operando normalmente. {stats.onlineDevices} de {stats.totalDevices} dispositivos estão online agora.</p>
+                        <p>O sistema ZAccess está operando normalmente. {stats.onlineDevices} de {stats.totalDevices} dispositivos estão online agora.</p>
                     )}
                     <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 20, fontSize: '0.85rem', color: '#fff' }}>

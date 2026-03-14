@@ -1,5 +1,5 @@
-import { useLocation } from 'react-router-dom';
-import { Bell, Search, Settings, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Search, Settings } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -9,6 +9,9 @@ const pageTitles = {
     '/locations': { title: 'Locais', subtitle: 'Zonas de acesso configuradas' },
     '/relays': { title: 'Relés', subtitle: 'Dispositivos de controle final' },
     '/inputs': { title: 'Sensores', subtitle: 'Monitoramento de entradas' },
+    '/schedules': { title: 'Agendamentos', subtitle: 'Eventos programados por horário' },
+    '/automations': { title: 'Automações', subtitle: 'Regras automáticas disparadas por sensores' },
+    '/invites': { title: 'Convites & Acessos', subtitle: 'Links temporários para visitantes' },
     '/users': { title: 'Usuários', subtitle: 'Gestão de permissões e acessos' },
     '/monitoring': { title: 'Health Check', subtitle: 'Status de hardware em tempo real' },
     '/reports': { title: 'Relatórios', subtitle: 'Histórico de eventos e auditoria' },
@@ -17,9 +20,10 @@ const pageTitles = {
 
 export default function Header() {
     const location = useLocation();
+    const navigate = useNavigate();
     const { deviceEvents, connected } = useSocket();
     const { user } = useAuth();
-    const pageInfo = pageTitles[location.pathname] || { title: 'ZAcesss', subtitle: '' };
+    const pageInfo = pageTitles[location.pathname] || { title: 'ZAccess', subtitle: 'Controle de acessos IoT' };
 
     return (
         <header className="header">
@@ -62,7 +66,12 @@ export default function Header() {
                     )}
                 </button>
 
-                <button className="btn btn-icon btn-secondary" style={{ width: 44, height: 44, borderRadius: 12 }}>
+                <button
+                    className="btn btn-icon btn-secondary"
+                    style={{ width: 40, height: 40, borderRadius: 10, fontSize: '0.8rem' }}
+                    onClick={() => navigate('/settings')}
+                    title="Configurações do painel"
+                >
                     <Settings size={20} />
                 </button>
             </div>

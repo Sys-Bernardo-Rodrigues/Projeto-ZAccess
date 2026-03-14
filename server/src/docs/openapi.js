@@ -85,7 +85,7 @@ const options = {
                             type: 'string',
                             enum: ['door', 'gate', 'light', 'lock', 'automation', 'other'],
                         },
-                        gpioPin: { type: 'integer', example: 17 },
+                        gpioPin: { type: 'integer', example: 29, description: 'BCM: IN1=29, IN2=31, IN3=33, IN4=35' },
                         state: {
                             type: 'string',
                             enum: ['open', 'closed'],

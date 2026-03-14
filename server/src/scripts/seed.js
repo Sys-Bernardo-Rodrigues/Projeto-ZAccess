@@ -52,10 +52,10 @@ const seed = async () => {
 
         // 5. Criar Relés para o dispositivo
         const relayData = [
-            { name: 'Porta Principal', type: 'door', channel: 1, gpioPin: 17, mode: 'pulse', deviceId: device._id },
-            { name: 'Portão Garagem', type: 'gate', channel: 2, gpioPin: 18, mode: 'pulse', deviceId: device._id },
-            { name: 'Iluminação Corredor', type: 'light', channel: 3, gpioPin: 27, mode: 'toggle', deviceId: device._id },
-            { name: 'Ar Condicionado', type: 'automation', channel: 4, gpioPin: 22, mode: 'toggle', deviceId: device._id }
+            { name: 'Porta Principal', type: 'door', channel: 1, gpioPin: 29, mode: 'pulse', deviceId: device._id },
+            { name: 'Portão Garagem', type: 'gate', channel: 2, gpioPin: 31, mode: 'pulse', deviceId: device._id },
+            { name: 'Iluminação Corredor', type: 'light', channel: 3, gpioPin: 33, mode: 'toggle', deviceId: device._id },
+            { name: 'Ar Condicionado', type: 'automation', channel: 4, gpioPin: 35, mode: 'toggle', deviceId: device._id }
         ];
 
         await Relay.insertMany(relayData);

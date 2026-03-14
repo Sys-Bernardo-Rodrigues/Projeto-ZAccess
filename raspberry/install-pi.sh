@@ -1,6 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # Zaccess Raspberry Pi - Instalação e configuração como serviço
+# Instala: dependências do sistema, Node.js 20, npm deps e serviço systemd.
 # Execute na pasta raspberry: bash install-pi.sh
 # =============================================================================
 
@@ -27,6 +28,14 @@ warn()  { echo -e "${YELLOW}[AVISO]${NC} $1"; }
 error() { echo -e "${RED}[ERRO]${NC} $1"; exit 1; }
 
 # -----------------------------------------------------------------------------
+# 0. Exigir sudo desde o início (para apt e systemd)
+# -----------------------------------------------------------------------------
+if [[ $EUID -ne 0 ]]; then
+    info "Este script precisa de sudo para instalar pacotes e o serviço."
+    exec sudo bash "$0" "$INSTALL_DIR"
+fi
+
+# -----------------------------------------------------------------------------
 # 1. Verificar se está no Linux (Raspberry Pi OS)
 # -----------------------------------------------------------------------------
 if [[ "$(uname)" != "Linux" ]]; then
@@ -34,11 +43,22 @@ if [[ "$(uname)" != "Linux" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 2. Verificar Node.js (instalar se não existir)
+# 2. Dependências do sistema (curl, compilação para better-sqlite3 e onoff)
+# -----------------------------------------------------------------------------
+info "Atualizando apt e instalando dependências do sistema..."
+apt-get update -qq
+apt-get install -y \
+    curl \
+    build-essential \
+    python3 \
+    git
+info "Dependências do sistema instaladas (curl, build-essential, python3, git)."
+
+# -----------------------------------------------------------------------------
+# 3. Node.js 20 (instalar se não existir ou versão antiga)
 # -----------------------------------------------------------------------------
 install_nodejs() {
     info "Instalando Node.js 20 (NodeSource)..."
-    apt-get update -qq
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
     if ! command -v node &>/dev/null; then
@@ -48,41 +68,39 @@ install_nodejs() {
 }
 
 if ! command -v node &>/dev/null; then
-    if [[ $EUID -eq 0 ]]; then
+    install_nodejs
+else
+    NODE_MAJOR=$(node -v | sed 's/v\([0-9]*\).*/\1/')
+    if [[ "$NODE_MAJOR" -lt 18 ]]; then
+        warn "Node.js atual é antigo ($(node -v)). Instalando Node.js 20..."
         install_nodejs
     else
-        warn "Node.js não encontrado. O script precisa de sudo para instalá-lo."
-        exec sudo bash "$0" "$INSTALL_DIR"
+        info "Node.js já instalado: $(node -v)"
     fi
 fi
 
 NODE_VERSION=$(node -v)
 info "Node.js: $NODE_VERSION"
+info "npm: $(npm -v 2>/dev/null || echo 'n/a')"
 
 # -----------------------------------------------------------------------------
-# 3. Criar diretório de dados (SQLite)
+# 4. Criar diretório de dados (SQLite)
 # -----------------------------------------------------------------------------
 mkdir -p "$INSTALL_DIR/data"
 info "Diretório data/ criado (configuração em SQLite)."
 
 # -----------------------------------------------------------------------------
-# 4. Instalar dependências npm
+# 5. Instalar dependências npm (better-sqlite3, onoff, etc.)
 # -----------------------------------------------------------------------------
-info "Instalando dependências (npm install)..."
+info "Instalando dependências npm (npm install --production)..."
 cd "$INSTALL_DIR"
 npm install --production
-info "Dependências instaladas."
+info "Dependências npm instaladas."
 
 # -----------------------------------------------------------------------------
-# 5. Instalar serviço systemd (requer sudo)
+# 6. Instalar serviço systemd
 # -----------------------------------------------------------------------------
-if [[ $EUID -ne 0 ]]; then
-    info "Requer sudo para instalar o serviço. Executando com sudo..."
-    exec sudo bash "$0" "$INSTALL_DIR"
-fi
-
-# Se foi chamado com sudo, o primeiro argumento pode ser o INSTALL_DIR passado
-if [[ -n "$1" ]]; then
+if [[ -n "$1" && "$1" == /* ]]; then
     INSTALL_DIR="$1"
 fi
 

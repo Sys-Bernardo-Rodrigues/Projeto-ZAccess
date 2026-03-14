@@ -119,7 +119,7 @@ export default function UsersPage() {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Gestão de Usuários</h1>
-                    <p className="page-subtitle">Controle quem pode acessar e operar o sistema ZAcesss</p>
+                    <p className="page-subtitle">Controle quem pode acessar e operar o sistema ZAccess</p>
                 </div>
                 <button className="btn btn-primary" onClick={openCreateModal}>
                     <Plus size={18} />

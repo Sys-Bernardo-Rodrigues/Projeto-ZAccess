@@ -16,6 +16,7 @@ import LogsPage from './pages/LogsPage';
 import AutomationsPage from './pages/AutomationsPage';
 import UsersPage from './pages/UsersPage';
 import MonitoringPage from './pages/MonitoringPage';
+import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import InvitationsPage from './pages/InvitationsPage';
 import InviteAccessPage from './pages/InviteAccessPage';
@@ -97,6 +98,7 @@ function AppRoutes() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/logs" element={<LogsPage />} />
         <Route path="/invites" element={<InvitationsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="/invite/:token" element={<InviteAccessPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
