@@ -1,18 +1,15 @@
 /**
  * Zacess - Relay Controller for Raspberry Pi
  *
- * Controla relés via pinos GPIO usando a lib onoff.
- * Em ambiente de desenvolvimento (sem GPIO real), opera em modo simulado.
+ * Controla relés via GPIO.
+ *
+ * Suporte a dois modos:
+ * - Modo libgpiod (comando `gpioset` disponível no sistema) – recomendado em Raspberry Pi OS recentes (Bookworm).
+ * - Modo simulado (quando `gpioset` não está disponível ou em ambiente de desenvolvimento).
  */
 
-let Gpio;
-try {
-    Gpio = require('onoff').Gpio;
-} catch (err) {
-    console.warn('⚠️  onoff não disponível - modo simulado ativado');
-    Gpio = null;
-}
-
+const { execSync } = require('child_process');
+const fs = require('fs');
 const logger = require('./utils/logger');
 
 class RelayController {
@@ -21,7 +18,24 @@ class RelayController {
         this.relays = {};
         this.states = {};
         this.gpioByChannel = {};
-        this.simulated = !Gpio;
+        this.useGpiod = process.platform === 'linux' && this.hasGpioSet();
+        this.simulated = !this.useGpiod;
+
+        if (this.useGpiod) {
+            logger.info('RelayController: usando gpioset (libgpiod) para controle de GPIO.');
+        } else {
+            logger.info('RelayController: modo simulado (gpioset não encontrado ou plataforma não suportada).');
+        }
+    }
+
+    hasGpioSet() {
+        try {
+            // Verifica se o binário gpioset está disponível no PATH
+            const which = execSync('command -v gpioset', { encoding: 'utf8' }).trim();
+            return which && fs.existsSync(which);
+        } catch (e) {
+            return false;
+        }
     }
 
     /**
@@ -36,20 +50,14 @@ class RelayController {
      */
     initRelay(channel, gpioPin) {
         this.gpioByChannel[channel] = gpioPin;
-
+ 
+        // No modo libgpiod não é necessário reservar explicitamente o pino aqui,
+        // o gpioset cuida da configuração como saída quando usado.
+        this.states[channel] = 0;
         if (this.simulated) {
             logger.gpio(`Relé inicializado: Canal ${channel} -> GPIO ${gpioPin} (simulado)`);
-            this.states[channel] = 0;
-            return;
-        }
-
-        try {
-            this.relays[channel] = new Gpio(gpioPin, 'out');
-            this.relays[channel].writeSync(0);
-            this.states[channel] = 0;
-            logger.gpio(`Relé inicializado: Canal ${channel} -> GPIO ${gpioPin}`);
-        } catch (err) {
-            logger.erro(`Relé canal ${channel} (GPIO ${gpioPin}): ${err.message}`);
+        } else {
+            logger.gpio(`Relé inicializado: Canal ${channel} -> GPIO ${gpioPin} (gpioset)`);
         }
     }
 
@@ -87,26 +95,28 @@ class RelayController {
     setRelay(channel, state) {
         const value = state === 'open' ? 1 : 0;
         const gpio = this.getGpioForChannel(channel);
-
+ 
         if (this.simulated) {
             logger.gpio(`Relé canal ${channel} (GPIO ${gpio ?? '?'}): ${state} (simulado)`);
             this.states[channel] = value;
             return true;
         }
 
-        const relay = this.relays[channel];
-        if (!relay) {
-            logger.erro(`Relé canal ${channel} (GPIO ${gpio ?? '?'}) não inicializado`);
+        if (gpio == null) {
+            logger.erro(`Relé canal ${channel}: GPIO não definido`);
             return false;
         }
 
         try {
-            relay.writeSync(value);
+            // Usar chip 0 (gpiochip0) e linha = número BCM do GPIO.
+            // Ex.: gpioset -c 0 19=1
+            const cmd = `gpioset -c 0 ${gpio}=${value}`;
+            execSync(cmd);
             this.states[channel] = value;
-            logger.gpio(`GPIO ${gpio} (canal ${channel}) acionado: ${state}`);
+            logger.gpio(`GPIO ${gpio} (canal ${channel}) acionado via gpioset: ${state}`);
             return true;
         } catch (err) {
-            logger.erro(`Relé canal ${channel} (GPIO ${gpio}): ${err.message}`);
+            logger.erro(`Relé canal ${channel} (GPIO ${gpio}) via gpioset: ${err.message}`);
             return false;
         }
     }
@@ -156,21 +166,6 @@ class RelayController {
      * Libera os recursos GPIO e limpa estado interno
      */
     cleanup() {
-        if (this.simulated) {
-            this.relays = {};
-            this.states = {};
-            this.gpioByChannel = {};
-            return;
-        }
-
-        for (const [channel, relay] of Object.entries(this.relays)) {
-            try {
-                relay.writeSync(0);
-                relay.unexport();
-            } catch (err) {
-                logger.erro(`Liberar relé canal ${channel}: ${err.message}`);
-            }
-        }
         this.relays = {};
         this.states = {};
         this.gpioByChannel = {};
