@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# ZAccess Device — Instalação no Raspberry Pi OS
-# Instala Node.js (se necessário), copia a aplicação para /opt e configura o serviço systemd.
+# ZAccess Device — Instalação no Raspberry Pi 4 + Raspberry OS (Bookworm/Lite)
+# Instala Node.js, gpiod, copia a aplicação para /opt e configura o serviço systemd.
 # Uso: sudo ./install.sh
 #
 
@@ -25,15 +25,23 @@ fi
 
 echo "=============================================="
 echo "  ZAccess Device — Instalação"
+echo "  (Raspberry Pi 4 + Raspberry OS Bookworm)"
 echo "=============================================="
 
-# --- Node.js ---
-# rsync para copiar a aplicação (pode não existir no minimal)
-if ! command -v rsync &>/dev/null; then
-  echo "[*] Instalando rsync..."
-  apt-get update -qq && apt-get install -y -qq rsync
-fi
+# --- Atualizar e instalar dependências do sistema ---
+echo "[*] Atualizando pacotes e instalando rsync + gpiod..."
+apt-get update -qq
+apt-get install -y -qq rsync
+# gpiod é obrigatório para GPIO no Pi 4 (interface gpioset; sysfs foi removida)
+apt-get install -y -qq gpiod
 
+if ! command -v gpioset &>/dev/null; then
+  echo "[ERRO] gpioset não encontrado após instalar gpiod. Verifique: sudo apt install gpiod"
+  exit 1
+fi
+echo "[OK] gpiod instalado ($(gpioset --version 2>/dev/null || true))"
+
+# --- Node.js ---
 install_node() {
   if command -v node &>/dev/null; then
     VER=$(node -v | sed 's/v//' | cut -d. -f1)
@@ -44,7 +52,6 @@ install_node() {
   fi
 
   echo "[*] Instalando Node.js 20 LTS (NodeSource)..."
-  apt-get update -qq
   apt-get install -y -qq ca-certificates curl gnupg
   mkdir -p /etc/apt/keyrings
   curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
@@ -62,22 +69,21 @@ mkdir -p "$INSTALL_DIR"
 rsync -a --exclude='node_modules' --exclude='.git' --exclude='config.json' --exclude='*.log' \
   "$SCRIPT_DIR/" "$INSTALL_DIR/"
 chown -R root:root "$INSTALL_DIR"
-# Permitir que utilizador pi (ou outro) leia; GPIO pode precisar do grupo gpio
 if getent group gpio &>/dev/null; then
   chgrp -R gpio "$INSTALL_DIR" 2>/dev/null || true
   chmod -R g+rX "$INSTALL_DIR"
 fi
 
-# --- Dependências ---
+# --- Dependências npm ---
 echo "[*] Instalando dependências npm..."
 cd "$INSTALL_DIR"
 npm install --production --no-audit --no-fund
-cd - >/dev/null
+cd "$SCRIPT_DIR"
 
 # --- Configuração inicial ---
 if [ ! -f "$INSTALL_DIR/config.json" ]; then
   cp "$INSTALL_DIR/config.default.json" "$INSTALL_DIR/config.json"
-  echo "[*] config.json criado a partir de config.default.json. Configure pela interface web."
+  echo "[*] config.json criado. Configure pela interface web (http://<IP>:3080)."
 fi
 
 # --- Serviço systemd ---
@@ -97,8 +103,6 @@ RestartSec=10
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=$SERVICE_NAME
-
-# Acesso à GPIO (Raspberry Pi)
 SupplementaryGroups=gpio
 
 [Install]
@@ -107,7 +111,7 @@ EOF
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
-systemctl start "$SERVICE_NAME"
+systemctl restart "$SERVICE_NAME"
 
 echo ""
 echo "=============================================="
@@ -116,12 +120,12 @@ echo "=============================================="
 echo ""
 echo "  Serviço: $SERVICE_NAME"
 echo "  Diretório: $INSTALL_DIR"
-echo "  Interface web: http://<IP-deste-Raspberry>:3080"
+echo "  Interface: http://<IP-deste-Raspberry>:3080"
 echo ""
-echo "  Comandos úteis:"
-echo "    sudo systemctl status $SERVICE_NAME   # estado"
-echo "    sudo systemctl restart $SERVICE_NAME  # reiniciar"
-echo "    sudo journalctl -u $SERVICE_NAME -f   # logs"
+echo "  Comandos:"
+echo "    sudo systemctl status $SERVICE_NAME"
+echo "    sudo systemctl restart $SERVICE_NAME"
+echo "    sudo journalctl -u $SERVICE_NAME -f"
 echo ""
-echo "  Para desinstalar: sudo $INSTALL_DIR/uninstall.sh"
+echo "  Desinstalar: sudo $INSTALL_DIR/uninstall.sh"
 echo ""
