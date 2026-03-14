@@ -380,18 +380,19 @@ export default function RelaysPage() {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                     <div className="form-group">
-                                        <label className="form-label">Pino GPIO</label>
+                                        <label className="form-label">Pino GPIO (BCM)</label>
                                         <input
                                             type="number"
                                             name="gpioPin"
                                             className="form-input"
-                                            placeholder="Ex: 17"
+                                            placeholder="Ex: 5, 6, 13 ou 19"
                                             value={form.gpioPin}
                                             onChange={handleChange}
                                             required
                                             min="0"
                                             max="40"
                                         />
+                                        <small className="form-hint">Raspberry Pi 4 (módulo 4 canais): BCM 5, 6, 13, 19</small>
                                     </div>
 
                                     <div className="form-group">

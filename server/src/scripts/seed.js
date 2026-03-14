@@ -50,12 +50,12 @@ const seed = async () => {
         });
         console.log('✅ Dispositivo criado: RPI-GATEWAY-01 (Serial: RPi4-TEST-001)');
 
-        // 5. Criar Relés para o dispositivo
+        // 5. Criar Relés para o dispositivo (gpioPin = número BCM no Raspberry Pi 4: 5, 6, 13, 19)
         const relayData = [
-            { name: 'Porta Principal', type: 'door', channel: 1, gpioPin: 29, mode: 'pulse', deviceId: device._id },
-            { name: 'Portão Garagem', type: 'gate', channel: 2, gpioPin: 31, mode: 'pulse', deviceId: device._id },
-            { name: 'Iluminação Corredor', type: 'light', channel: 3, gpioPin: 33, mode: 'toggle', deviceId: device._id },
-            { name: 'Ar Condicionado', type: 'automation', channel: 4, gpioPin: 35, mode: 'toggle', deviceId: device._id }
+            { name: 'Porta Principal', type: 'door', channel: 1, gpioPin: 5, mode: 'pulse', deviceId: device._id },
+            { name: 'Portão Garagem', type: 'gate', channel: 2, gpioPin: 6, mode: 'pulse', deviceId: device._id },
+            { name: 'Iluminação Corredor', type: 'light', channel: 3, gpioPin: 13, mode: 'toggle', deviceId: device._id },
+            { name: 'Ar Condicionado', type: 'automation', channel: 4, gpioPin: 19, mode: 'toggle', deviceId: device._id }
         ];
 
         await Relay.insertMany(relayData);

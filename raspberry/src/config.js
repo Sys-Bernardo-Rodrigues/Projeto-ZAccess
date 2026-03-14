@@ -14,13 +14,14 @@ module.exports = {
         delayMax: 10000,    // Sempre 10s entre tentativas (sem aumentar)
     },
     /**
-     * Módulo de Relé de 4 Canais: canal -> pino GPIO (BCM) para entradas de controle (IN1–IN4).
-     * Alimentação: VCC=17, JD-VCC=4, GND=20 (conectar no hardware; não controlados por software).
+     * Módulo de Relé de 4 Canais: canal -> número GPIO BCM para entradas de controle (IN1–IN4).
+     * Raspberry Pi 4: BCM 5, 6, 13, 19 (pinos físicos 29, 31, 33, 35 no header 40-pin).
+     * Alimentação do módulo: VCC, JD-VCC, GND (conectar no hardware; não controlados por software).
      */
     channelToGpio: {
-        1: 29,  // IN1
-        2: 31,  // IN2
-        3: 33,  // IN3
-        4: 35,  // IN4
+        1: 5,   // IN1 (BCM 5 = pino físico 29)
+        2: 6,   // IN2 (BCM 6 = pino físico 31)
+        3: 13,  // IN3 (BCM 13 = pino físico 33)
+        4: 19,  // IN4 (BCM 19 = pino físico 35)
     },
 };

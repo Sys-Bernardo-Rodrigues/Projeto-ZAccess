@@ -111,24 +111,24 @@ O código e o `.env` continuam na pasta; use `./install-pi.sh` para reinstalar.
 
 ## Conexão de relés (GPIO) – Módulo de 4 Canais
 
-**Alimentação do módulo (BCM):**
+**Alimentação do módulo** (conectar no hardware; não controlados por software):
 
-| Sinal   | GPIO (BCM) |
-|---------|------------|
-| VCC     | 17         |
-| JD-VCC  | 4          |
-| GND     | 20         |
+| Sinal   | Observação        |
+|---------|-------------------|
+| VCC     | Alimentação do módulo |
+| JD-VCC  | Jump para ativar relés |
+| GND     | Terra              |
 
-**Entradas de controle (IN1–IN4):**
+**Entradas de controle (IN1–IN4) – números BCM (Raspberry Pi 4):**
 
-| Canal | Sinal | GPIO Pin (BCM) |
-|-------|-------|----------------|
-| 1     | IN1   | 29             |
-| 2     | IN2   | 31             |
-| 3     | IN3   | 33             |
-| 4     | IN4   | 35             |
+| Canal | Sinal | GPIO BCM | Pino físico (40-pin) |
+|-------|-------|----------|----------------------|
+| 1     | IN1   | 5        | 29                   |
+| 2     | IN2   | 6        | 31                   |
+| 3     | IN3   | 13       | 33                   |
+| 4     | IN4   | 19       | 35                   |
 
-- Use um **módulo de relé de 4 canais**. O mapeamento está em `src/config.js` (`channelToGpio`); altere só se sua fiação for diferente.
+- Use um **módulo de relé de 4 canais**. O mapeamento está em `src/config.js` (`channelToGpio`). No painel admin, cadastre os relés com **GPIO BCM** (5, 6, 13, 19).
 - Relés em contato seco (NO/NC).
 - Modo **pulse**: ativa por X ms e desliga.
 - Modo **toggle**: muda estado e mantém.

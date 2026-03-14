@@ -829,6 +829,13 @@ a:hover {
   cursor: pointer;
 }
 
+.form-hint {
+  display: block;
+  margin-top: var(--space-xs);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* ============================================
    Tables
    ============================================ */
