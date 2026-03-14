@@ -57,29 +57,19 @@ function getRelayIdByChannel(channel) {
   return r?.id || null;
 }
 
-function setupSocketHandlers(sock, serverUrl, onStatusChange) {
+function setupSocketHandlers(sock, onStatusChange) {
   sock.on('connect', () => {
-    console.log(`[ZAccess] Conectado ao servidor: ${serverUrl}`);
     startHeartbeat();
     onStatusChange?.('connected');
   });
 
-  sock.on('connect_error', (err) => {
-    const msg = err?.message || err?.description || String(err);
-    console.error('[ZAccess] Erro ao conectar ao servidor:', msg);
-    onStatusChange?.('error', msg);
-  });
-
   sock.on('disconnect', (reason) => {
-    console.log('[ZAccess] Desconectado do servidor:', reason || 'sem motivo');
     clearHeartbeat();
     onStatusChange?.('disconnected', reason);
   });
 
   sock.on('error', (payload) => {
-    const msg = payload?.message || payload?.description || (payload && String(payload));
-    console.error('[ZAccess] Erro do socket:', msg || payload);
-    onStatusChange?.('error', msg);
+    onStatusChange?.('error', payload?.message);
   });
 
   sock.on('device:config', (data) => {
@@ -155,14 +145,13 @@ function start(cfg, onStatusChange) {
   );
   gpio.init(channelToGpio);
 
-  console.log(`[ZAccess] A conectar a ${serverUrl} (serial: ${serialNumber})...`);
   const sock = io(serverUrl, {
     path: '/socket.io',
     auth: { serialNumber, authToken },
     transports: ['websocket', 'polling'],
   });
 
-  setupSocketHandlers(sock, serverUrl, onStatusChange);
+  setupSocketHandlers(sock, onStatusChange);
   socket = sock;
 
   return {

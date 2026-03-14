@@ -1,17 +1,25 @@
 #!/bin/bash
+#
 # ZAccess Device — Instalação no Raspberry Pi OS
-# Instala Node.js, copia a aplicação para /opt/zaccess-device e configura serviço systemd.
-# Executar com sudo: sudo ./install.sh
+# Instala Node.js (se necessário), copia a aplicação para /opt e configura o serviço systemd.
+# Uso: sudo ./install.sh
+#
 
 set -e
 
 INSTALL_DIR="/opt/zaccess-device"
 SERVICE_NAME="zaccess-device"
-NODE_VERSION="20"
+NODE_VERSION_REQUIRED="18"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# --- Verificações iniciais ---
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Execute com sudo: sudo $0"
+  echo "Execute com sudo: sudo ./install.sh"
+  exit 1
+fi
+
+if [ ! -f "$SCRIPT_DIR/package.json" ] || [ ! -d "$SCRIPT_DIR/src" ]; then
+  echo "Execute este script a partir da pasta device do projeto (onde está package.json e src/)."
   exit 1
 fi
 
@@ -19,75 +27,85 @@ echo "=============================================="
 echo "  ZAccess Device — Instalação"
 echo "=============================================="
 
-# --- 1. Node.js ---
-if ! command -v node &>/dev/null; then
-  echo "[1/6] Instalando Node.js ${NODE_VERSION}.x..."
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
-  apt-get install -y nodejs
-else
-  echo "[1/6] Node.js já instalado: $(node -v)"
+# --- Node.js ---
+# rsync para copiar a aplicação (pode não existir no minimal)
+if ! command -v rsync &>/dev/null; then
+  echo "[*] Instalando rsync..."
+  apt-get update -qq && apt-get install -y -qq rsync
 fi
 
-NODE_MAJOR=$(node -v | cut -d. -f1 | tr -d 'v')
-if [ "$NODE_MAJOR" -lt 18 ]; then
-  echo "Node.js 18+ é necessário. Atual: $(node -v). Instale manualmente ou atualize."
-  exit 1
-fi
+install_node() {
+  if command -v node &>/dev/null; then
+    VER=$(node -v | sed 's/v//' | cut -d. -f1)
+    if [ "$VER" -ge "$NODE_VERSION_REQUIRED" ] 2>/dev/null; then
+      echo "[OK] Node.js já instalado: $(node -v)"
+      return
+    fi
+  fi
 
-# --- 1b. gpiod (GPIO no Pi 5 / Bookworm) ---
-if ! command -v gpioset &>/dev/null; then
-  echo "[1b/6] Instalando gpiod (GPIO para Raspberry Pi 5 / kernel novo)..."
-  apt-get update -qq && apt-get install -y gpiod 2>/dev/null || echo "      gpiod não encontrado no repositório; o dispositivo usará onoff se disponível."
-else
-  echo "[1b/6] gpiod já instalado."
-fi
+  echo "[*] Instalando Node.js 20 LTS (NodeSource)..."
+  apt-get update -qq
+  apt-get install -y -qq ca-certificates curl gnupg
+  mkdir -p /etc/apt/keyrings
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+  apt-get update -qq
+  apt-get install -y -qq nodejs
+  echo "[OK] Node.js instalado: $(node -v)"
+}
 
-# --- 2. Diretório de instalação ---
-echo "[2/6] Copiando aplicação para ${INSTALL_DIR}..."
+install_node
+
+# --- Copiar aplicação para /opt ---
+echo "[*] Instalando aplicação em $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
-if command -v rsync &>/dev/null; then
-  rsync -a --exclude='node_modules' --exclude='config.json' --exclude='.git' \
-    "$SCRIPT_DIR/" "$INSTALL_DIR/"
-else
-  (cd "$SCRIPT_DIR" && tar --exclude=node_modules --exclude=config.json --exclude=.git -cf - .) | (cd "$INSTALL_DIR" && tar xf -)
-fi
-[ ! -f "$INSTALL_DIR/config.json" ] && cp "$INSTALL_DIR/config.default.json" "$INSTALL_DIR/config.json"
+rsync -a --exclude='node_modules' --exclude='.git' --exclude='config.json' --exclude='*.log' \
+  "$SCRIPT_DIR/" "$INSTALL_DIR/"
 chown -R root:root "$INSTALL_DIR"
-chmod 755 "$INSTALL_DIR"
+# Permitir que utilizador pi (ou outro) leia; GPIO pode precisar do grupo gpio
+if getent group gpio &>/dev/null; then
+  chgrp -R gpio "$INSTALL_DIR" 2>/dev/null || true
+  chmod -R g+rX "$INSTALL_DIR"
+fi
 
-# --- 3. Dependências ---
-echo "[3/6] Instalando dependências npm..."
-(cd "$INSTALL_DIR" && npm install --production --omit=dev)
+# --- Dependências ---
+echo "[*] Instalando dependências npm..."
+cd "$INSTALL_DIR"
+npm install --production --no-audit --no-fund
+cd - >/dev/null
 
-# --- 4. Serviço systemd ---
-echo "[4/6] Configurando serviço systemd..."
+# --- Configuração inicial ---
+if [ ! -f "$INSTALL_DIR/config.json" ]; then
+  cp "$INSTALL_DIR/config.default.json" "$INSTALL_DIR/config.json"
+  echo "[*] config.json criado a partir de config.default.json. Configure pela interface web."
+fi
+
+# --- Serviço systemd ---
+echo "[*] Configurando serviço systemd..."
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" << EOF
 [Unit]
-Description=ZAccess Device (Raspberry Pi - 4 relés)
+Description=ZAccess Device - Agente Raspberry Pi (4 relés)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$(which node) $INSTALL_DIR/src/server.js
-Restart=on-failure
+ExecStart=$(command -v node) $INSTALL_DIR/src/server.js
+Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-# GPIO e acesso a /opt (root)
-User=root
-# Porta da interface web (opcional)
-Environment=DEVICE_UI_PORT=3080
+SyslogIdentifier=$SERVICE_NAME
+
+# Acesso à GPIO (Raspberry Pi)
+SupplementaryGroups=gpio
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-
-# --- 5. Ativar e iniciar ---
-echo "[5/6] Ativando e iniciando serviço..."
 systemctl enable "$SERVICE_NAME"
 systemctl start "$SERVICE_NAME"
 
@@ -95,9 +113,15 @@ echo ""
 echo "=============================================="
 echo "  Instalação concluída"
 echo "=============================================="
+echo ""
+echo "  Serviço: $SERVICE_NAME"
+echo "  Diretório: $INSTALL_DIR"
 echo "  Interface web: http://<IP-deste-Raspberry>:3080"
-echo "  Comandos:"
-echo "    sudo systemctl status $SERVICE_NAME"
-echo "    sudo systemctl restart $SERVICE_NAME"
-echo "    sudo journalctl -u $SERVICE_NAME -f"
-echo "=============================================="
+echo ""
+echo "  Comandos úteis:"
+echo "    sudo systemctl status $SERVICE_NAME   # estado"
+echo "    sudo systemctl restart $SERVICE_NAME  # reiniciar"
+echo "    sudo journalctl -u $SERVICE_NAME -f   # logs"
+echo ""
+echo "  Para desinstalar: sudo $INSTALL_DIR/uninstall.sh"
+echo ""

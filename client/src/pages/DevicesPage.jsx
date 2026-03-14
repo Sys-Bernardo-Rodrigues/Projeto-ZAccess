@@ -77,11 +77,9 @@ export default function DevicesPage() {
         loadDevices();
 
         const handler = (e) => {
-            const { deviceId, status } = e.detail || {};
-            if (!deviceId) return;
-            const id = String(deviceId);
+            const { deviceId, status } = e.detail;
             setDevices((prev) =>
-                prev.map((d) => (String(d._id) === id ? { ...d, status } : d))
+                prev.map((d) => (d._id === deviceId ? { ...d, status } : d))
             );
         };
         window.addEventListener('device-status-change', handler);
