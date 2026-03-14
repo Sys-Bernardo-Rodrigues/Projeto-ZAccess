@@ -1,7 +1,8 @@
 #!/bin/bash
 #
 # ZAccess Device — Instalação no Raspberry Pi 4 + Raspberry OS (Bookworm/Lite)
-# Instala Node.js, gpiod, copia a aplicação para /opt e configura o serviço systemd.
+# Instala Node.js, pigpio (C library), copia a aplicação para /opt e configura o serviço systemd.
+# GPIO: 4 relés via pigpio (/dev/gpiomem). Não usa gpiod/gpiochip.
 # Uso: sudo ./install.sh
 #
 
@@ -25,18 +26,21 @@ fi
 
 echo "=============================================="
 echo "  ZAccess Device — Instalação"
-echo "  (Raspberry Pi 4 + Raspberry OS Bookworm)"
+echo "  (Raspberry Pi 4 + Raspberry OS)"
 echo "=============================================="
 
 # --- Atualizar e instalar dependências do sistema ---
-echo "[*] Atualizando pacotes e instalando rsync + gpiod..."
+echo "[*] Atualizando pacotes e instalando rsync + pigpio..."
 apt-get update -qq
 apt-get install -y -qq rsync
-# pigpio C library — acesso GPIO via /dev/gpiomem (evita conflito "device busy" do gpiochip)
 apt-get install -y -qq pigpio
-# Não usar o daemon pigpiod; o pacote Node usa a biblioteca diretamente (um único processo)
-systemctl stop pigpiod 2>/dev/null || true
-systemctl disable pigpiod 2>/dev/null || true
+
+# O pacote Node usa a biblioteca pigpio diretamente; o daemon pigpiod não deve estar ativo
+if systemctl is-active --quiet pigpiod 2>/dev/null; then
+  echo "[*] Parando e desativando pigpiod (o dispositivo usa a biblioteca diretamente)..."
+  systemctl stop pigpiod
+  systemctl disable pigpiod
+fi
 echo "[OK] pigpio (C library) instalado"
 
 # --- Node.js ---

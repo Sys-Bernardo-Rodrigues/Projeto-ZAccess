@@ -2,6 +2,7 @@
 #
 # ZAccess Device — Desinstalação no Raspberry Pi OS
 # Para o serviço, remove o unit e o diretório de instalação.
+# Opcionalmente pergunta se deseja remover Node.js e/ou pigpio.
 # Uso: sudo ./uninstall.sh   ou   sudo /opt/zaccess-device/uninstall.sh
 #
 
@@ -48,9 +49,25 @@ echo ""
 echo "[OK] ZAccess Device desinstalado."
 echo ""
 
+# --- Opcional: reativar pigpiod ---
+if systemctl list-unit-files pigpiod.service &>/dev/null; then
+  if ! systemctl is-enabled --quiet pigpiod 2>/dev/null; then
+    read -r -p "Reativar o daemon pigpiod (para outros programas usarem GPIO)? [y/N] " resp
+    case "$resp" in
+      [yY][eE][sS]|[yY])
+        systemctl enable pigpiod
+        systemctl start pigpiod
+        echo "[OK] pigpiod reativado."
+        ;;
+      *)
+        echo "pigpiod mantido desativado."
+        ;;
+    esac
+  fi
+fi
+
 # --- Opcional: remover Node.js ---
 if command -v node &>/dev/null; then
-  echo "Node.js continua instalado (pode ser usado por outras aplicações)."
   read -r -p "Remover Node.js e npm? [y/N] " resp
   case "$resp" in
     [yY][eE][sS]|[yY])
@@ -66,4 +83,19 @@ if command -v node &>/dev/null; then
   esac
 fi
 
+# --- Opcional: remover pigpio (C library) ---
+if dpkg -l pigpio &>/dev/null; then
+  read -r -p "Remover a biblioteca pigpio (sudo apt remove pigpio)? [y/N] " resp
+  case "$resp" in
+    [yY][eE][sS]|[yY])
+      apt-get remove -y pigpio
+      echo "[OK] pigpio removido."
+      ;;
+    *)
+      echo "pigpio mantido."
+      ;;
+  esac
+fi
+
+echo ""
 echo "Até à próxima."
