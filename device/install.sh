@@ -21,11 +21,11 @@ echo "=============================================="
 
 # --- 1. Node.js ---
 if ! command -v node &>/dev/null; then
-  echo "[1/5] Instalando Node.js ${NODE_VERSION}.x..."
+  echo "[1/6] Instalando Node.js ${NODE_VERSION}.x..."
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
   apt-get install -y nodejs
 else
-  echo "[1/5] Node.js já instalado: $(node -v)"
+  echo "[1/6] Node.js já instalado: $(node -v)"
 fi
 
 NODE_MAJOR=$(node -v | cut -d. -f1 | tr -d 'v')
@@ -34,8 +34,16 @@ if [ "$NODE_MAJOR" -lt 18 ]; then
   exit 1
 fi
 
+# --- 1b. gpiod (GPIO no Pi 5 / Bookworm) ---
+if ! command -v gpioset &>/dev/null; then
+  echo "[1b/6] Instalando gpiod (GPIO para Raspberry Pi 5 / kernel novo)..."
+  apt-get update -qq && apt-get install -y gpiod 2>/dev/null || echo "      gpiod não encontrado no repositório; o dispositivo usará onoff se disponível."
+else
+  echo "[1b/6] gpiod já instalado."
+fi
+
 # --- 2. Diretório de instalação ---
-echo "[2/5] Copiando aplicação para ${INSTALL_DIR}..."
+echo "[2/6] Copiando aplicação para ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 if command -v rsync &>/dev/null; then
   rsync -a --exclude='node_modules' --exclude='config.json' --exclude='.git' \
@@ -48,11 +56,11 @@ chown -R root:root "$INSTALL_DIR"
 chmod 755 "$INSTALL_DIR"
 
 # --- 3. Dependências ---
-echo "[3/5] Instalando dependências npm..."
+echo "[3/6] Instalando dependências npm..."
 (cd "$INSTALL_DIR" && npm install --production --omit=dev)
 
 # --- 4. Serviço systemd ---
-echo "[4/5] Configurando serviço systemd..."
+echo "[4/6] Configurando serviço systemd..."
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" << EOF
 [Unit]
 Description=ZAccess Device (Raspberry Pi - 4 relés)
@@ -79,7 +87,7 @@ EOF
 systemctl daemon-reload
 
 # --- 5. Ativar e iniciar ---
-echo "[5/5] Ativando e iniciando serviço..."
+echo "[5/6] Ativando e iniciando serviço..."
 systemctl enable "$SERVICE_NAME"
 systemctl start "$SERVICE_NAME"
 

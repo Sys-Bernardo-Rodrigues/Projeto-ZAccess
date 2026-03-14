@@ -31,9 +31,10 @@ sudo ./install.sh
 
 O script:
 1. Instala **Node.js 20.x** (se não existir), via NodeSource.
-2. Copia a aplicação para **/opt/zaccess-device**.
-3. Instala dependências com `npm install --production`.
-4. Cria e ativa o serviço systemd **zaccess-device** (inicia com o sistema).
+2. Instala **gpiod** (ferramentas `gpioset`/`gpioget`) para Raspberry Pi 5 e kernels novos, onde a GPIO legada (/sys/class/gpio) foi removida.
+3. Copia a aplicação para **/opt/zaccess-device**.
+4. Instala dependências com `npm install --production`.
+5. Cria e ativa o serviço systemd **zaccess-device** (inicia com o sistema).
 
 Interface web: **http://\<IP-do-Raspberry\>:3080**
 
@@ -86,6 +87,26 @@ npm install
    Clique em **Salvar configuração** e depois em **Conectar**.
 
 5. **Opcional**: marque **Conectar automaticamente ao iniciar** e salve para o dispositivo conectar sozinho após reinício.
+
+### Se não conectar ao servidor
+
+A conexão com o backend **não depende do GPIO**. Se o dispositivo não aparecer como "online" no painel:
+
+1. **URL do servidor**  
+   Use o endereço acessível **a partir do Raspberry** (não `localhost` do seu PC). Ex.: `http://192.168.1.100:5000` ou `https://meudominio.com`. Confirme a porta (ex. 5000).
+
+2. **Rede**  
+   No Raspberry, teste: `curl -I http://IP-DO-SERVIDOR:5000`. Se falhar, é problema de rede/firewall.
+
+3. **Número de série e token**  
+   Devem ser exatamente os que aparecem ao criar o dispositivo no painel (Dispositivos → Adicionar). Se regenerou o token, atualize no dispositivo.
+
+4. **Logs**  
+   Veja a mensagem exata de erro:
+   ```bash
+   sudo journalctl -u zaccess-device -f
+   ```
+   Procure por `[ZAccess] Conectado ao servidor` (sucesso) ou `[ZAccess] Erro ao conectar` (falha e motivo).
 
 ## Variáveis de ambiente
 

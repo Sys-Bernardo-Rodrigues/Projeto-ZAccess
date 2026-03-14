@@ -88,6 +88,9 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('Auto-connect ativado. Iniciando agente...');
     agentHandle = agent.start(config, (status, detail) => {
       lastStatus = { status, detail: detail || null };
+      if (status === 'connected') console.log('[ZAccess] Backend: conectado.');
+      if (status === 'error') console.error('[ZAccess] Backend:', detail);
+      if (status === 'disconnected') console.log('[ZAccess] Backend: desconectado.', detail || '');
     });
   }
 });
