@@ -172,7 +172,7 @@ fi
 
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" << EOF
 [Unit]
-Description=ZAccess Device - Agente Raspberry Pi (4 relés)
+Description=ZAccess Device - Controlo de relés (pigpio) + interface web
 After=network-online.target
 Wants=network-online.target
 

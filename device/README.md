@@ -1,6 +1,6 @@
 # ZAccess — Dispositivo Raspberry Pi (4 relés)
 
-Sistema que roda no Raspberry Pi: conecta ao servidor ZAccess via Socket.IO e controla um módulo de **4 relés** através da interface web local.
+Sistema que corre no Raspberry Pi: **interface web local** para **ligar e desligar** cada canal (IN1–IN4) de uma placa de 4 relés, usando a biblioteca **pigpio**.
 
 ## Ligação do módulo de 4 relés
 
@@ -21,6 +21,12 @@ Sistema que roda no Raspberry Pi: conecta ao servidor ZAccess via Socket.IO e co
 - A biblioteca pigpio é compilada **dentro da pasta do device** (`vendor/pigpio` → `vendor/pigpio-install`); o `install.sh` clona o repositório [joan2937/pigpio](https://github.com/joan2937/pigpio) se não existir.
 - O daemon `pigpiod` não deve estar ativo (o Node usa a biblioteca diretamente).
 - Módulo 4 relés com entradas ópticas (IN1–IN4, GND, VCC, JD-VCC).
+
+## Interface web
+
+Um **botão por cada IN** da placa (IN1, IN2, IN3, IN4). Cada clique alterna entre **ligado** e **desligado**; o estado é mostrado no próprio botão (ON/OFF).
+
+URL: `http://<IP-do-Raspberry>:3080`
 
 ## Opcional: ter o pigpio já na pasta device
 
@@ -55,7 +61,7 @@ Interface web: `http://<IP-do-Raspberry>:3080`
 
 ### Relés não disparam / "Module did not self-register"
 
-Se aparecer **"Module did not self-register"** ou **"pigpio não disponível"** nos logs, o módulo nativo foi compilado para outra versão do Node. Recompile no Raspberry com o mesmo Node que o serviço usa:
+Se aparecer **"Module did not self-register"** ou **"pigpio não disponível"** nos logs, recompile no Raspberry com o mesmo Node que o serviço usa:
 
 ```bash
 sudo /opt/zaccess-device/scripts/rebuild-pigpio.sh
@@ -84,31 +90,8 @@ Ou, a partir da pasta do repositório: `sudo ./uninstall.sh` (remove o que está
 ```bash
 cd device
 npm install
+npm start
 ```
-
-## Uso
-
-1. **Registrar o dispositivo no servidor**  
-   No painel web do ZAccess (backend), em **Dispositivos → Adicionar**, crie um dispositivo. Anote o **número de série** e o **token de autenticação**.
-
-2. **Iniciar o serviço local**  
-   No Raspberry:
-   ```bash
-   npm start
-   ```
-
-3. **Abrir o frontend de configuração**  
-   No navegador (no próprio Raspberry ou em outro PC na mesma rede):
-   ```
-   http://<IP-do-Raspberry>:3080
-   ```
-
-4. **Configurar e conectar**  
-   - **URL do servidor**: ex. `https://seu-servidor.com` ou `http://192.168.1.10:5000`
-   - **Número de série** e **Token**: os obtidos no passo 1  
-   Clique em **Salvar configuração** e depois em **Conectar**.
-
-5. **Opcional**: marque **Conectar automaticamente ao iniciar** e salve para o dispositivo conectar sozinho após reinício.
 
 ## Variáveis de ambiente
 
@@ -116,10 +99,9 @@ npm install
 
 ## Estrutura
 
-- `src/server.js` — Servidor Express (UI + API de configuração e controle do agente).
-- `src/agent.js` — Cliente Socket.IO e lógica de relés (comandos `relay:toggle`, `relay:control`).
-- `src/gpio.js` — Controle GPIO (BCM 5, 6, 13, 19).
-- `src/configLoader.js` — Leitura/gravação de `config.json`.
-- `public/index.html` — Frontend de configuração.
+- `src/server.js` — Servidor Express (UI + API para ligar/desligar relés).
+- `src/gpio.js` — Controle GPIO com pigpio (BCM 5, 6, 13, 19).
+- `src/configLoader.js` — Leitura de `config.json` (mapa de canais → GPIO).
+- `public/index.html` — Frontend: um botão por IN (toggle ON/OFF).
 
-O ficheiro `config.json` é criado ao salvar pela primeira vez na UI (não versionado; use `config.default.json` como referência).
+O ficheiro `config.json` é opcional; use `config.default.json` como referência (apenas `gpio.relays`).

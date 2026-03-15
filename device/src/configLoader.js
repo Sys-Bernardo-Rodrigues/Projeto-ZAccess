@@ -17,9 +17,7 @@ function load() {
     }
   }
   return {
-    server: { url: '', serialNumber: '', authToken: '' },
     gpio: { relays: { 1: 5, 2: 6, 3: 13, 4: 19 } },
-    autoConnect: false,
   };
 }
 
