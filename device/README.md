@@ -53,15 +53,21 @@ O script:
 
 Interface web: `http://<IP-do-Raspberry>:3080`
 
-### Relés não disparam pelo frontend?
+### Relés não disparam / "Module did not self-register"
 
-Se os botões IN1–IN4 na interface não acionarem os relés, o serviço pode estar sem `LD_LIBRARY_PATH`. No Raspberry execute:
+Se aparecer **"Module did not self-register"** ou **"pigpio não disponível"** nos logs, o módulo nativo foi compilado para outra versão do Node. Recompile no Raspberry com o mesmo Node que o serviço usa:
+
+```bash
+sudo /opt/zaccess-device/scripts/rebuild-pigpio.sh
+```
+
+Se os relés continuarem em "simulação" mas não houver esse erro, confira o `LD_LIBRARY_PATH`:
 
 ```bash
 sudo /opt/zaccess-device/scripts/fix-service-env.sh
 ```
 
-Depois teste de novo em `http://<IP>:3080`.
+Depois teste em `http://<IP>:3080`.
 
 ### Desinstalação
 
