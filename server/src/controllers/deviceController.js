@@ -10,8 +10,12 @@ exports.getDevices = async (req, res, next) => {
         const { status, locationId } = req.query;
         const filter = { active: true };
 
+        if (req.allowedLocationId) {
+            filter.locationId = req.allowedLocationId;
+        } else if (locationId) {
+            filter.locationId = locationId;
+        }
         if (status) filter.status = status;
-        if (locationId) filter.locationId = locationId;
 
         const devices = await Device.find(filter)
             .populate('locationId', 'name address')

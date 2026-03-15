@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [theme, setTheme] = useState(() => localStorage.getItem('zacess_theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('zacess_theme') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

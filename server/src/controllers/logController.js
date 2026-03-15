@@ -1,4 +1,6 @@
 const ActivityLog = require('../models/ActivityLog');
+const Device = require('../models/Device');
+const Relay = require('../models/Relay');
 const { apiResponse } = require('../utils/helpers');
 
 // GET /api/logs
@@ -9,6 +11,15 @@ exports.getLogs = async (req, res, next) => {
 
         if (deviceId) filter.deviceId = deviceId;
         if (action) filter.action = action;
+
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            const relayIds = await Relay.find({ deviceId: { $in: deviceIds } }).select('_id');
+            filter.$or = [
+                { deviceId: { $in: deviceIds.map((d) => d._id) } },
+                { relayId: { $in: relayIds.map((r) => r._id) } },
+            ];
+        }
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -40,7 +51,18 @@ exports.getLogs = async (req, res, next) => {
 // GET /api/logs/stats
 exports.getStats = async (req, res, next) => {
     try {
-        const stats = await ActivityLog.aggregate([
+        const matchStage = {};
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            const relayIds = await Relay.find({ deviceId: { $in: deviceIds } }).select('_id');
+            matchStage.$or = [
+                { deviceId: { $in: deviceIds.map((d) => d._id) } },
+                { relayId: { $in: relayIds.map((r) => r._id) } },
+            ];
+        }
+        const pipeline = [];
+        if (Object.keys(matchStage).length) pipeline.push({ $match: matchStage });
+        pipeline.push(
             {
                 $group: {
                     _id: '$action',
@@ -49,7 +71,8 @@ exports.getStats = async (req, res, next) => {
                 },
             },
             { $sort: { count: -1 } },
-        ]);
+        );
+        const stats = await ActivityLog.aggregate(pipeline);
 
         apiResponse(res, 200, { stats });
     } catch (error) {

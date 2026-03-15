@@ -27,10 +27,21 @@ exports.createInvitation = async (req, res, next) => {
             return apiResponse(res, 400, null, 'A data de início deve ser anterior à data de expiração.');
         }
 
-        // Check if all relays exist
-        const relays = await Relay.find({ _id: { $in: relayIds } });
+        // Check if all relays exist and (if gestor) belong to allowed location
+        const relays = await Relay.find({ _id: { $in: relayIds } }).populate('deviceId', 'locationId');
         if (relays.length !== relayIds.length) {
             return apiResponse(res, 404, null, 'Uma ou mais portas selecionadas não foram encontradas.');
+        }
+        let locationId = null;
+        if (req.allowedLocationId) {
+            const allowed = req.allowedLocationId.toString();
+            const allInLocation = relays.every((r) => r.deviceId?.locationId?.toString() === allowed);
+            if (!allInLocation) {
+                return apiResponse(res, 403, null, 'Só é permitido criar convites para portas do seu local.');
+            }
+            locationId = req.allowedLocationId;
+        } else if (relays.length > 0 && relays[0].deviceId?.locationId) {
+            locationId = relays[0].deviceId.locationId;
         }
 
         const invitation = await Invitation.create({
@@ -38,6 +49,7 @@ exports.createInvitation = async (req, res, next) => {
             relayIds,
             validFrom: dateFrom,
             validUntil: dateUntil,
+            locationId: locationId || undefined,
             createdBy: req.user._id,
         });
 
@@ -59,7 +71,11 @@ exports.createInvitation = async (req, res, next) => {
 // Get all invitations (ADMIN/USER)
 exports.getInvitations = async (req, res, next) => {
     try {
-        const invitations = await Invitation.find({ active: true })
+        const filter = { active: true };
+        if (req.allowedLocationId) {
+            filter.locationId = req.allowedLocationId;
+        }
+        const invitations = await Invitation.find(filter)
             .populate({
                 path: 'relayIds',
                 populate: { path: 'deviceId', select: 'name' }
@@ -193,8 +209,12 @@ exports.unlockByInvitation = async (req, res, next) => {
 // Delete invitation
 exports.deleteInvitation = async (req, res, next) => {
     try {
-        const invitation = await Invitation.findByIdAndUpdate(req.params.id, { active: false }, { new: true });
+        const invitation = await Invitation.findById(req.params.id);
         if (!invitation) return apiResponse(res, 404, null, 'Convite não encontrado.');
+        if (req.allowedLocationId && invitation.locationId?.toString() !== req.allowedLocationId.toString()) {
+            return apiResponse(res, 403, null, 'Só é permitido remover convites do seu local.');
+        }
+        await Invitation.findByIdAndUpdate(req.params.id, { active: false });
         apiResponse(res, 200, null, 'Convite removido.');
     } catch (error) {
         next(error);

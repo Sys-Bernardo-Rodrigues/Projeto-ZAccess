@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import L from 'leaflet';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 import { Plus, MapPin, Trash2, Edit, X, Send, Cpu, LayoutList, LocateFixed, Navigation, Users, UserPlus } from 'lucide-react';
 
 // Corrigindo o problema dos ícones do Leaflet no Webpack/Vite
@@ -42,7 +43,16 @@ function LocationPicker({ onSelect, position }) {
     return position ? <Marker position={position} icon={neonIcon} /> : null;
 }
 
+const TILE_URL_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const TILE_URL_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
 export default function LocationsPage() {
+    const { user } = useAuth();
+    const isGestor = !!user?.locationId;
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    const mapTileUrl = isDarkTheme ? TILE_URL_DARK : TILE_URL_LIGHT;
+    const mapBg = isDarkTheme ? '#0a0e1a' : 'var(--bg-primary)';
     const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -281,12 +291,14 @@ export default function LocationsPage() {
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button className="btn btn-secondary" onClick={() => setShowListModal(true)}>
                         <LayoutList size={18} />
-                        Gerenciar Locais
+                        {isGestor ? 'Ver detalhes' : 'Gerenciar Locais'}
                     </button>
-                    <button className="btn btn-primary" onClick={openCreateModal}>
-                        <Plus size={18} />
-                        Novo Local
-                    </button>
+                    {!isGestor && (
+                        <button className="btn btn-primary" onClick={openCreateModal}>
+                            <Plus size={18} />
+                            Novo Local
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -295,11 +307,11 @@ export default function LocationsPage() {
                 <MapContainer
                     center={mapCenter}
                     zoom={13}
-                    style={{ height: '100%', width: '100%', background: '#0a0e1a' }}
+                    style={{ height: '100%', width: '100%', background: mapBg }}
                 >
                     <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                        url={mapTileUrl}
+                        attribution={MAP_ATTRIBUTION}
                     />
                     <MapController center={mapCenter} />
 
@@ -327,13 +339,15 @@ export default function LocationsPage() {
                                             )}
                                         </div>
 
-                                        <button
-                                            className="btn btn-sm btn-outline-primary"
-                                            style={{ width: '100%', marginTop: 16, fontSize: '0.7rem' }}
-                                            onClick={() => openEditModal(loc)}
-                                        >
-                                            <Edit size={12} /> Editar Local
-                                        </button>
+                                        {!isGestor && (
+                                            <button
+                                                className="btn btn-sm btn-outline-primary"
+                                                style={{ width: '100%', marginTop: 16, fontSize: '0.7rem' }}
+                                                onClick={() => openEditModal(loc)}
+                                            >
+                                                <Edit size={12} /> Editar Local
+                                            </button>
+                                        )}
                                     </div>
                                 </Popup>
                             </Marker>
@@ -393,12 +407,16 @@ export default function LocationsPage() {
                                                         }}>
                                                             <LocateFixed size={14} />
                                                         </button>
-                                                        <button className="btn btn-icon btn-secondary btn-sm" onClick={() => openEditModal(loc)}>
-                                                            <Edit size={14} />
-                                                        </button>
-                                                        <button className="btn btn-icon btn-danger btn-sm" onClick={() => handleDelete(loc._id)}>
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                                        {!isGestor && (
+                                                            <>
+                                                                <button className="btn btn-icon btn-secondary btn-sm" onClick={() => openEditModal(loc)}>
+                                                                    <Edit size={14} />
+                                                                </button>
+                                                                <button className="btn btn-icon btn-danger btn-sm" onClick={() => handleDelete(loc._id)}>
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -609,9 +627,9 @@ export default function LocationsPage() {
                                     <MapContainer
                                         center={[form.coordinates.lat || -23.5, form.coordinates.lng || -46.6]}
                                         zoom={14}
-                                        style={{ height: '100%', width: '100%' }}
+                                        style={{ height: '100%', width: '100%', background: mapBg }}
                                     >
-                                        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                                        <TileLayer url={mapTileUrl} attribution={MAP_ATTRIBUTION} />
                                         <LocationPicker onSelect={handleMapClick} position={[form.coordinates.lat, form.coordinates.lng]} />
                                         <MapController center={[form.coordinates.lat, form.coordinates.lng]} />
                                     </MapContainer>
@@ -628,7 +646,7 @@ export default function LocationsPage() {
 
             <style>{`
                 .leaflet-container {
-                    background: #0a0e1a !important;
+                    background: ${mapBg} !important;
                 }
                 .custom-popup .leaflet-popup-content-wrapper {
                     background: var(--bg-card);

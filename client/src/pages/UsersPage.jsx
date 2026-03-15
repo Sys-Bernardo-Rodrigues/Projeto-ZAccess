@@ -17,6 +17,7 @@ import {
 
 export default function UsersPage() {
     const [users, setUsers] = useState([]);
+    const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
@@ -25,13 +26,18 @@ export default function UsersPage() {
         email: '',
         password: '',
         role: 'operator',
+        locationId: '',
         active: true,
     });
 
     const loadUsers = useCallback(async () => {
         try {
-            const res = await api.get('/users');
-            setUsers(res.data.data.users);
+            const [usersRes, locationsRes] = await Promise.all([
+                api.get('/users'),
+                api.get('/locations'),
+            ]);
+            setUsers(usersRes.data.data.users);
+            setLocations(locationsRes.data?.data?.locations ?? []);
         } catch (err) {
             toast.error('Erro ao carregar usuários');
         } finally {
@@ -50,6 +56,7 @@ export default function UsersPage() {
             email: '',
             password: '',
             role: 'operator',
+            locationId: '',
             active: true,
         });
         setShowModal(true);
@@ -60,8 +67,9 @@ export default function UsersPage() {
         setForm({
             name: user.name,
             email: user.email,
-            password: '', // Password stays empty on edit unless changed
+            password: '',
             role: user.role,
+            locationId: user.locationId?._id || user.locationId || '',
             active: user.active,
         });
         setShowModal(true);
@@ -70,15 +78,14 @@ export default function UsersPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const payload = { ...form };
+            if (!payload.locationId) payload.locationId = null;
             if (editingUser) {
-                // Remove password if empty
-                const payload = { ...form };
                 if (!payload.password) delete payload.password;
-
                 await api.put(`/users/${editingUser._id}`, payload);
                 toast.success('Usuário atualizado!');
             } else {
-                await api.post('/users', form);
+                await api.post('/users', payload);
                 toast.success('Usuário criado!');
             }
             setShowModal(false);
@@ -133,6 +140,7 @@ export default function UsersPage() {
                         <tr>
                             <th>Usuário</th>
                             <th>Role</th>
+                            <th>Local designado</th>
                             <th>Status</th>
                             <th>Criado em</th>
                             <th style={{ textAlign: 'right' }}>Ações</th>
@@ -163,6 +171,9 @@ export default function UsersPage() {
                                     </div>
                                 </td>
                                 <td>{getRoleBadge(user.role)}</td>
+                                <td style={{ fontSize: '0.85rem' }}>
+                                    {user.locationId?.name || (user.locationId ? '—' : 'Todos os locais')}
+                                </td>
                                 <td>
                                     {user.active ? (
                                         <span className="status-badge online">
@@ -263,6 +274,22 @@ export default function UsersPage() {
                                             <option value="false">Inativo (Bloqueado)</option>
                                         </select>
                                     </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Local designado (gestor)</label>
+                                    <select
+                                        className="form-select"
+                                        value={form.locationId}
+                                        onChange={(e) => setForm({ ...form, locationId: e.target.value })}
+                                    >
+                                        <option value="">Todos os locais (acesso completo)</option>
+                                        {locations.map((loc) => (
+                                            <option key={loc._id} value={loc._id}>{loc.name}</option>
+                                        ))}
+                                    </select>
+                                    <p style={{ marginTop: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        Se preenchido, o usuário terá acesso apenas a este local e poderá cadastrar moradores e criar convites somente para ele.
+                                    </p>
                                 </div>
                             </div>
                             <div className="modal-footer">

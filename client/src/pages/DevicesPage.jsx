@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 import {
     Plus,
     Cpu,
@@ -44,6 +45,8 @@ const TableSkeleton = () => (
 );
 
 export default function DevicesPage() {
+    const { user } = useAuth();
+    const canManageDevices = user?.role === 'admin';
     const [devices, setDevices] = useState([]);
     const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -205,10 +208,12 @@ export default function DevicesPage() {
                     <h1 className="page-title">Dispositivos</h1>
                     <p className="page-subtitle">{devices.length} dispositivos registrados</p>
                 </div>
-                <button className="btn btn-primary" onClick={openCreateModal}>
-                    <Plus size={18} />
-                    Novo Dispositivo
-                </button>
+                {canManageDevices && (
+                    <button className="btn btn-primary" onClick={openCreateModal}>
+                        <Plus size={18} />
+                        Novo Dispositivo
+                    </button>
+                )}
             </div>
 
             {devices.length === 0 ? (
@@ -217,14 +222,16 @@ export default function DevicesPage() {
                         <Cpu />
                         <h3>Nenhum dispositivo registrado</h3>
                         <p>Registre seu primeiro dispositivo para começar</p>
-                        <button
-                            className="btn btn-primary"
-                            style={{ marginTop: 16 }}
-                            onClick={openCreateModal}
-                        >
-                            <Plus size={18} />
-                            Registrar Dispositivo
-                        </button>
+                        {canManageDevices && (
+                            <button
+                                className="btn btn-primary"
+                                style={{ marginTop: 16 }}
+                                onClick={openCreateModal}
+                            >
+                                <Plus size={18} />
+                                Registrar Dispositivo
+                            </button>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -289,20 +296,24 @@ export default function DevicesPage() {
                                             >
                                                 <RefreshCw size={14} />
                                             </button>
-                                            <button
-                                                className="btn btn-icon btn-secondary btn-sm"
-                                                onClick={() => openEditModal(device)}
-                                                title="Editar"
-                                            >
-                                                <Edit size={14} />
-                                            </button>
-                                            <button
-                                                className="btn btn-icon btn-danger btn-sm"
-                                                onClick={() => handleDelete(device._id)}
-                                                title="Remover"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
+                                            {canManageDevices && (
+                                                <>
+                                                    <button
+                                                        className="btn btn-icon btn-secondary btn-sm"
+                                                        onClick={() => openEditModal(device)}
+                                                        title="Editar"
+                                                    >
+                                                        <Edit size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-icon btn-danger btn-sm"
+                                                        onClick={() => handleDelete(device._id)}
+                                                        title="Remover"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

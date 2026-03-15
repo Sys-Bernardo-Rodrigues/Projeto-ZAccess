@@ -77,7 +77,10 @@ exports.login = async (req, res, next) => {
 
         logger.info(`User login: ${email}`);
 
-        apiResponse(res, 200, { user, token }, 'Login realizado com sucesso.');
+        const userPopulated = await User.findById(user._id).populate('locationId', 'name address');
+        const userResponse = userPopulated ? userPopulated.toJSON ? userPopulated.toJSON() : userPopulated : user;
+
+        apiResponse(res, 200, { user: userResponse, token }, 'Login realizado com sucesso.');
     } catch (error) {
         next(error);
     }
@@ -86,8 +89,9 @@ exports.login = async (req, res, next) => {
 // GET /api/auth/me
 exports.getMe = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user._id);
-        apiResponse(res, 200, { user });
+        const user = await User.findById(req.user._id).populate('locationId', 'name address');
+        const userJson = user ? (user.toJSON ? user.toJSON() : user) : null;
+        apiResponse(res, 200, { user: userJson });
     } catch (error) {
         next(error);
     }

@@ -1,55 +1,55 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ============================================
-   CSS Custom Properties - Design System (tema escuro padrão)
+   CSS Custom Properties - Design System (tema claro padrão)
    ============================================ */
 :root {
-  /* Colors - Dark Theme */
-  --bg-primary: #0a0e1a;
-  --bg-secondary: #111827;
-  --bg-card: #1a1f35;
-  --bg-card-hover: #222845;
-  --bg-input: #151b30;
-  --bg-glass: rgba(26, 31, 53, 0.8);
+  /* Colors - Light Theme (padrão) */
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-input: #e2e8f0;
+  --bg-glass: rgba(255, 255, 255, 0.9);
 
-  /* Neon Purple Accent Colors */
-  --accent-primary: #a855f7;
-  --accent-primary-light: #c084fc;
-  --accent-primary-dark: #7e22ce;
-  --accent-secondary: #d946ef;
-  --accent-success: #10b981;
-  --accent-warning: #f59e0b;
-  --accent-danger: #ef4444;
-  --accent-info: #8b5cf6;
+  /* Accent Colors */
+  --accent-primary: #6366f1;
+  --accent-primary-light: #818cf8;
+  --accent-primary-dark: #4f46e5;
+  --accent-secondary: #8b5cf6;
+  --accent-success: #059669;
+  --accent-warning: #d97706;
+  --accent-danger: #dc2626;
+  --accent-info: #6366f1;
 
   /* Gradient */
-  --gradient-primary: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
-  --gradient-success: linear-gradient(135deg, #10b981 0%, #8b5cf6 100%);
-  --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
-  --gradient-dark: linear-gradient(135deg, #0a0e1a 0%, #1a1f35 100%);
-  --gradient-card: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(217, 70, 239, 0.05) 100%);
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-success: linear-gradient(135deg, #059669 0%, #6366f1 100%);
+  --gradient-danger: linear-gradient(135deg, #dc2626 0%, #d97706 100%);
+  --gradient-dark: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
+  --gradient-card: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(139, 92, 246, 0.04) 100%);
 
   /* Text */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
   --text-muted: #64748b;
-  --text-accent: #818cf8;
+  --text-accent: #4f46e5;
 
   /* Borders */
-  --border-color: rgba(168, 85, 247, 0.2);
-  --border-color-hover: rgba(168, 85, 247, 0.4);
+  --border-color: rgba(148, 163, 184, 0.4);
+  --border-color-hover: rgba(71, 85, 105, 0.6);
   --border-radius-sm: 8px;
   --border-radius-md: 12px;
   --border-radius-lg: 16px;
   --border-radius-xl: 24px;
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 24px rgba(168, 85, 247, 0.3);
-  --shadow-glow-success: 0 0 24px rgba(16, 185, 129, 0.2);
-  --shadow-glow-danger: 0 0 24px rgba(239, 68, 68, 0.2);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.1);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.2);
+  --shadow-glow-success: 0 0 20px rgba(5, 150, 105, 0.15);
+  --shadow-glow-danger: 0 0 20px rgba(220, 38, 38, 0.15);
 
   /* Spacing */
   --space-xs: 4px;
@@ -67,31 +67,61 @@
   /* Layout */
   --sidebar-width: 224px;
   --header-height: 72px;
+  --header-bg: rgba(255, 255, 255, 0.9);
+
+  /* Sidebar (tema claro) */
+  --sidebar-logo-color: #0f172a;
+  --sidebar-badge-bg: rgba(0, 0, 0, 0.06);
+
+  /* Auth / Login (tema claro) */
+  --auth-brand-mid: #e2e8f0;
 }
 
-/* Tema claro – sobrescreve apenas as cores principais */
-[data-theme='light'] {
-  --bg-primary: #f3f4f6;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f9fafb;
-  --bg-input: #f3f4f6;
-  --bg-glass: rgba(255, 255, 255, 0.8);
+/* Tema escuro – sobrescreve quando usuário escolher modo escuro */
+[data-theme='dark'] {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a1f35;
+  --bg-card-hover: #222845;
+  --bg-input: #151b30;
+  --bg-glass: rgba(26, 31, 53, 0.8);
 
-  --text-primary: #0f172a;
-  --text-secondary: #4b5563;
-  --text-muted: #6b7280;
-  --text-accent: #4f46e5;
+  --accent-primary: #a855f7;
+  --accent-primary-light: #c084fc;
+  --accent-primary-dark: #7e22ce;
+  --accent-secondary: #d946ef;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --accent-info: #8b5cf6;
 
-  --border-color: rgba(148, 163, 184, 0.6);
-  --border-color-hover: rgba(107, 114, 128, 0.8);
+  --gradient-primary: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #8b5cf6 100%);
+  --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+  --gradient-dark: linear-gradient(135deg, #0a0e1a 0%, #1a1f35 100%);
+  --gradient-card: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(217, 70, 239, 0.05) 100%);
 
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 10px 20px rgba(15, 23, 42, 0.15);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-accent: #818cf8;
 
-  --gradient-dark: linear-gradient(135deg, #e5e7eb 0%, #ffffff 100%);
-  --gradient-card: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(217, 70, 239, 0.03) 100%);
+  --border-color: rgba(168, 85, 247, 0.2);
+  --border-color-hover: rgba(168, 85, 247, 0.4);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 24px rgba(168, 85, 247, 0.3);
+  --shadow-glow-success: 0 0 24px rgba(16, 185, 129, 0.2);
+  --shadow-glow-danger: 0 0 24px rgba(239, 68, 68, 0.2);
+
+  --sidebar-logo-color: #fff;
+  --sidebar-badge-bg: rgba(255, 255, 255, 0.08);
+
+  --auth-brand-mid: #0f172a;
+
+  --header-bg: rgba(10, 14, 26, 0.85);
 }
 
 /* ============================================
@@ -334,7 +364,7 @@ a:hover {
   left: var(--sidebar-width);
   right: 0;
   height: var(--header-height);
-  background: rgba(10, 14, 26, 0.85);
+  background: var(--header-bg);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -975,7 +1005,7 @@ a:hover {
   align-items: center;
   justify-content: center;
   padding: var(--space-2xl);
-  background: linear-gradient(160deg, var(--bg-secondary) 0%, #0f172a 50%, var(--bg-primary) 100%);
+  background: linear-gradient(160deg, var(--bg-secondary) 0%, var(--auth-brand-mid) 50%, var(--bg-primary) 100%);
   border-right: 1px solid var(--border-color);
 }
 
@@ -994,7 +1024,7 @@ a:hover {
 .auth__logo-text {
   font-size: 2.25rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--sidebar-logo-color);
   letter-spacing: -1px;
 }
 

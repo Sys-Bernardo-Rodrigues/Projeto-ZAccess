@@ -65,6 +65,7 @@ const authMiddleware = async (req, res, next) => {
         }
 
         req.user = user;
+        req.allowedLocationId = (user.role === 'admin' ? null : (user.locationId || null));
         next();
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {

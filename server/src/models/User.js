@@ -29,6 +29,11 @@ const userSchema = new mongoose.Schema(
             enum: ['admin', 'operator', 'viewer'],
             default: 'operator',
         },
+        locationId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Location',
+            default: null,
+        },
         active: {
             type: Boolean,
             default: true,

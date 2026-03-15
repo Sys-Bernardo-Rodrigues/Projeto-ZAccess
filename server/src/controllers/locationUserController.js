@@ -11,6 +11,9 @@ const logger = require('../utils/logger');
 exports.getByLocation = async (req, res, next) => {
     try {
         const { locationId } = req.params;
+        if (req.allowedLocationId && req.allowedLocationId.toString() !== locationId) {
+            return apiResponse(res, 403, null, 'Acesso permitido apenas ao local designado.');
+        }
         const location = await Location.findOne({ _id: locationId, active: true });
         if (!location) {
             return apiResponse(res, 404, null, 'Local não encontrado.');
@@ -33,6 +36,9 @@ exports.getByLocation = async (req, res, next) => {
 exports.create = async (req, res, next) => {
     try {
         const { locationId } = req.params;
+        if (req.allowedLocationId && req.allowedLocationId.toString() !== locationId) {
+            return apiResponse(res, 403, null, 'Só é permitido cadastrar usuários no local designado.');
+        }
         const { name, email, password, role, phone, unit } = req.body;
 
         const location = await Location.findOne({ _id: locationId, active: true });
@@ -71,6 +77,9 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
     try {
         const { locationId, userId } = req.params;
+        if (req.allowedLocationId && req.allowedLocationId.toString() !== locationId) {
+            return apiResponse(res, 403, null, 'Acesso permitido apenas ao local designado.');
+        }
         const { name, email, password, role, phone, unit, active } = req.body;
 
         const locationUser = await LocationUser.findOne({
@@ -123,6 +132,9 @@ exports.update = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
     try {
         const { locationId, userId } = req.params;
+        if (req.allowedLocationId && req.allowedLocationId.toString() !== locationId) {
+            return apiResponse(res, 403, null, 'Acesso permitido apenas ao local designado.');
+        }
 
         const locationUser = await LocationUser.findOneAndDelete({
             _id: userId,

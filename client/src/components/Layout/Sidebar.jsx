@@ -21,11 +21,15 @@ import {
     UserPlus,
 } from 'lucide-react';
 
-const mainNavItems = [
+const getMainNavItems = (hasAssignedLocation) => [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/devices', label: 'Dispositivos', icon: Cpu },
-    { path: '/locations', label: 'Locais', icon: MapPin },
+    { path: '/locations', label: hasAssignedLocation ? 'Meu local' : 'Locais', icon: MapPin },
     { path: '/invites', label: 'Convites', icon: UserPlus },
+];
+
+const historyNavItems = [
+    { path: '/logs', label: 'Atividades', icon: ScrollText },
 ];
 
 const hardwareNavItems = [
@@ -40,7 +44,6 @@ const hardwareDisabledItems = [
 const adminNavItems = [
     { path: '/users', label: 'Usuários', icon: Users },
     { path: '/reports', label: 'Relatórios', icon: FileText },
-    { path: '/logs', label: 'Atividades', icon: ScrollText },
 ];
 
 const adminDisabledItems = [
@@ -107,17 +110,17 @@ export default function Sidebar() {
                         fontSize: '1.45rem',
                         fontWeight: 900,
                         letterSpacing: -1.2,
-                        color: '#fff',
+                        color: 'var(--sidebar-logo-color)',
                         lineHeight: 1.1,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                        textShadow: '0 1px 2px rgba(0,0,0,0.06)'
                     }}>
-                        ZAccess<span style={{ color: 'var(--accent-primary-light)' }}>.</span>
+                        ZAccess<span style={{ color: 'var(--accent-primary)' }}>.</span>
                     </h1>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 5,
-                        background: 'rgba(255,255,255,0.05)',
+                        background: 'var(--sidebar-badge-bg)',
                         padding: '2px 8px',
                         borderRadius: 20,
                         width: 'fit-content'
@@ -139,8 +142,15 @@ export default function Sidebar() {
             <nav className="sidebar-nav">
                 <div className="sidebar-section">
                     <span className="sidebar-section-title">Home</span>
-                    {mainNavItems.map(renderLink)}
+                    {getMainNavItems(!!user?.locationId).map(renderLink)}
                 </div>
+
+                {(user?.role === 'admin' || user?.role === 'operator') && (
+                    <div className="sidebar-section">
+                        <span className="sidebar-section-title">Histórico</span>
+                        {historyNavItems.map(renderLink)}
+                    </div>
+                )}
 
                 <div className="sidebar-section">
                     <span className="sidebar-section-title">Hardware</span>
@@ -151,7 +161,7 @@ export default function Sidebar() {
                     </NavLink>
                 </div>
 
-                {user?.role === 'admin' && (
+                {user?.role === 'admin' && !user?.locationId && (
                     <div className="sidebar-section">
                         <span className="sidebar-section-title">Administração</span>
                         {adminNavItems.map(renderLink)}

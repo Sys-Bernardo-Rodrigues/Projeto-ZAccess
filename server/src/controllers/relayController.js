@@ -1,6 +1,9 @@
 const Relay = require('../models/Relay');
 const Device = require('../models/Device');
 const ActivityLog = require('../models/ActivityLog');
+const Schedule = require('../models/Schedule');
+const Invitation = require('../models/Invitation');
+const Automation = require('../models/Automation');
 const { pushDeviceConfig } = require('../services/deviceSyncService');
 const { apiResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
@@ -11,6 +14,10 @@ exports.getRelays = async (req, res, next) => {
         const { deviceId } = req.query;
         const filter = { active: true };
         if (deviceId) filter.deviceId = deviceId;
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            filter.deviceId = { $in: deviceIds.map((d) => d._id) };
+        }
 
         const relays = await Relay.find(filter)
             .populate('deviceId', 'name serialNumber status locationId')
@@ -26,10 +33,13 @@ exports.getRelays = async (req, res, next) => {
 exports.getRelay = async (req, res, next) => {
     try {
         const relay = await Relay.findById(req.params.id)
-            .populate('deviceId', 'name serialNumber status socketId');
+            .populate('deviceId', 'name serialNumber status socketId locationId');
 
         if (!relay) {
             return apiResponse(res, 404, null, 'Relé não encontrado.');
+        }
+        if (req.allowedLocationId && relay.deviceId?.locationId?.toString() !== req.allowedLocationId.toString()) {
+            return apiResponse(res, 403, null, 'Acesso a este relé não permitido.');
         }
 
         apiResponse(res, 200, { relay });
@@ -163,20 +173,49 @@ exports.toggleRelay = async (req, res, next) => {
     }
 };
 
-// DELETE /api/relays/:id (soft delete)
+// DELETE /api/relays/:id (exclusão real para liberar GPIO/canal para novo cadastro)
 exports.deleteRelay = async (req, res, next) => {
     try {
-        const relay = await Relay.findByIdAndUpdate(
-            req.params.id,
-            { active: false },
-            { new: true }
-        ).populate('deviceId', '_id');
-
+        const relayId = req.params.id;
+        const relay = await Relay.findById(relayId).populate('deviceId', '_id');
         if (!relay) {
             return apiResponse(res, 404, null, 'Relé não encontrado.');
         }
 
         const deviceId = relay.deviceId?._id || relay.deviceId;
+        const relayObjId = relay._id;
+
+        // Remove referências em agendamentos
+        await Schedule.updateMany(
+            { relayIds: relayObjId },
+            { $pull: { relayIds: relayObjId } }
+        );
+        await Schedule.updateMany(
+            { relayId: relayObjId },
+            { $unset: { relayId: 1 } }
+        );
+        await Schedule.deleteMany({
+            $and: [
+                { $or: [{ relayId: { $exists: false } }, { relayId: null }] },
+                { $or: [{ relayIds: [] }, { relayIds: { $exists: false } }] },
+            ],
+        });
+
+        // Remove do array relayIds dos convites; desativa convite se ficar sem portas
+        await Invitation.updateMany(
+            { relayIds: relayObjId },
+            { $pull: { relayIds: relayObjId } }
+        );
+        await Invitation.updateMany(
+            { relayIds: { $size: 0 } },
+            { $set: { active: false } }
+        );
+
+        // Desativa automações que usavam este relé (relayId é obrigatório no schema)
+        await Automation.updateMany({ 'action.relayId': relayObjId }, { enabled: false });
+
+        await Relay.findByIdAndDelete(relayId);
+
         const io = req.app.get('io');
         if (io && deviceId) await pushDeviceConfig(io, deviceId);
 

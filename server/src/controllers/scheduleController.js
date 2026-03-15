@@ -1,5 +1,6 @@
 const Schedule = require('../models/Schedule');
 const Relay = require('../models/Relay');
+const Device = require('../models/Device');
 const ActivityLog = require('../models/ActivityLog');
 
 /**
@@ -9,7 +10,21 @@ const ActivityLog = require('../models/ActivityLog');
  */
 exports.getSchedules = async (req, res) => {
     try {
-        const schedules = await Schedule.find()
+        let query = {};
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            const allowedRelayIds = (await Relay.find({ deviceId: { $in: deviceIds } }).select('_id')).map((r) => r._id);
+            if (allowedRelayIds.length === 0) {
+                return res.status(200).json({ success: true, count: 0, data: { schedules: [] } });
+            }
+            query = {
+                $or: [
+                    { relayId: { $in: allowedRelayIds } },
+                    { relayIds: { $not: { $elemMatch: { $nin: allowedRelayIds } } }, relayIds: { $exists: true, $ne: [] } },
+                ],
+            };
+        }
+        const schedules = await Schedule.find(query)
             .populate({
                 path: 'relayId',
                 populate: { path: 'deviceId', select: 'name status' }
@@ -36,8 +51,16 @@ exports.getSchedules = async (req, res) => {
  */
 exports.createSchedule = async (req, res) => {
     try {
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            const allowedRelayIds = (await Relay.find({ deviceId: { $in: deviceIds } }).select('_id')).map((r) => r._id.toString());
+            const ids = (req.body.relayIds && req.body.relayIds.length) ? req.body.relayIds : (req.body.relayId ? [req.body.relayId] : []);
+            const allAllowed = ids.every((id) => allowedRelayIds.includes(id.toString()));
+            if (!allAllowed || ids.length === 0) {
+                return res.status(403).json({ success: false, message: 'Só é permitido agendar relés do seu local.' });
+            }
+        }
         req.body.createdBy = req.user._id;
-        // Normalizar: se vier relayIds não enviar relayId
         if (req.body.relayIds && req.body.relayIds.length) {
             req.body.relayId = undefined;
         } else if (req.body.relayId) {
@@ -64,6 +87,17 @@ exports.createSchedule = async (req, res) => {
  */
 exports.updateSchedule = async (req, res) => {
     try {
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            const allowedRelayIds = (await Relay.find({ deviceId: { $in: deviceIds } }).select('_id')).map((r) => r._id.toString());
+            const ids = (req.body.relayIds && req.body.relayIds.length) ? req.body.relayIds : (req.body.relayId ? [req.body.relayId] : []);
+            if (ids.length > 0) {
+                const allAllowed = ids.every((id) => allowedRelayIds.includes(id.toString()));
+                if (!allAllowed) {
+                    return res.status(403).json({ success: false, message: 'Só é permitido agendar relés do seu local.' });
+                }
+            }
+        }
         if (req.body.relayIds && req.body.relayIds.length) {
             req.body.relayId = undefined;
         } else if (req.body.relayId) {
@@ -91,9 +125,20 @@ exports.updateSchedule = async (req, res) => {
  */
 exports.deleteSchedule = async (req, res) => {
     try {
-        const schedule = await Schedule.findById(req.params.id);
+        const schedule = await Schedule.findById(req.params.id)
+            .populate('relayId')
+            .populate('relayIds');
         if (!schedule) {
             return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+        }
+        if (req.allowedLocationId) {
+            const deviceIds = await Device.find({ locationId: req.allowedLocationId, active: true }).select('_id');
+            const allowedRelayIds = (await Relay.find({ deviceId: { $in: deviceIds } }).select('_id')).map((r) => r._id.toString());
+            const ids = (schedule.relayIds && schedule.relayIds.length) ? schedule.relayIds.map((r) => r._id) : (schedule.relayId ? [schedule.relayId._id] : []);
+            const allAllowed = ids.length > 0 && ids.every((id) => allowedRelayIds.includes(id.toString()));
+            if (!allAllowed) {
+                return res.status(403).json({ success: false, message: 'Só é permitido remover agendamentos do seu local.' });
+            }
         }
 
         await schedule.deleteOne();

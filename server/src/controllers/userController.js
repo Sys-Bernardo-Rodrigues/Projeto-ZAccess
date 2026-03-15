@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 // @access  Private/Admin
 exports.getUsers = async (req, res, next) => {
     try {
-        const users = await User.find().sort({ createdAt: -1 });
+        const users = await User.find().populate('locationId', 'name address').sort({ createdAt: -1 });
         apiResponse(res, 200, { users });
     } catch (error) {
         next(error);
@@ -20,7 +20,7 @@ exports.getUsers = async (req, res, next) => {
 // @access  Private/Admin
 exports.getUser = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params.id).populate('locationId', 'name address');
         if (!user) {
             return apiResponse(res, 404, null, 'Usuário não encontrado.');
         }
@@ -35,14 +35,14 @@ exports.getUser = async (req, res, next) => {
 // @access  Private/Admin
 exports.createUser = async (req, res, next) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, locationId } = req.body;
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return apiResponse(res, 409, null, 'Email já cadastrado.');
         }
 
-        const user = await User.create({ name, email, password, role });
+        const user = await User.create({ name, email, password, role, locationId: locationId || undefined });
 
         await ActivityLog.create({
             action: 'device_registered', // Reusing for user registration log
@@ -61,7 +61,7 @@ exports.createUser = async (req, res, next) => {
 // @access  Private/Admin
 exports.updateUser = async (req, res, next) => {
     try {
-        const { name, email, role, active } = req.body;
+        const { name, email, role, active, locationId } = req.body;
 
         let user = await User.findById(req.params.id);
         if (!user) {
@@ -75,7 +75,7 @@ exports.updateUser = async (req, res, next) => {
 
         user = await User.findByIdAndUpdate(
             req.params.id,
-            { name, email, role, active },
+            { name, email, role, active, locationId: locationId === '' ? null : locationId },
             { new: true, runValidators: true }
         );
 
