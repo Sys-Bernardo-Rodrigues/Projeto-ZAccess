@@ -11,13 +11,17 @@ let Gpio = null;
 try {
   pigpio = require('pigpio');
   Gpio = pigpio.Gpio;
-  // Se o módulo nativo não carregou, gpioInitialise não existe e o Gpio vai falhar
   if (typeof pigpio.gpioInitialise !== 'function') {
-    console.warn('[GPIO] Módulo nativo pigpio não carregou. Defina LD_LIBRARY_PATH para a pasta da lib (ex.: /opt/zaccess-device/vendor/pigpio-install/lib) e reinicie o serviço. Execute: sudo scripts/fix-service-env.sh');
     Gpio = null;
   }
-} catch (e) {
+} catch (_) {
+  pigpio = null;
   Gpio = null;
+}
+
+if (!Gpio) {
+  console.warn('[GPIO] pigpio em modo simulação (relés não vão mudar no hardware).');
+  console.warn('[GPIO] No Raspberry Pi: npm rebuild pigpio   e, se usar lib local: export LD_LIBRARY_PATH=vendor/pigpio-install/lib');
 }
 
 const CHANNEL_TO_BCM = {
@@ -36,10 +40,7 @@ function init(channelToGpio = null) {
     Object.entries(map).map(([k, v]) => [Number(k), Number(v)])
   );
 
-  if (!Gpio) {
-    console.warn('[GPIO] pigpio não disponível (instale: sudo apt install pigpio e npm install pigpio).');
-    return;
-  }
+  if (!Gpio) return;
 
   close();
   for (const [channel, bcm] of Object.entries(customMap)) {

@@ -59,21 +59,31 @@ O script:
 
 Interface web: `http://<IP-do-Raspberry>:3080`
 
-### Relés não disparam / "Module did not self-register"
+### "Module did not self-register" / pigpio em simulação
 
-Se aparecer **"Module did not self-register"** ou **"pigpio não disponível"** nos logs, recompile no Raspberry com o mesmo Node que o serviço usa:
+Esse erro aparece quando o módulo nativo do pigpio foi compilado com **outra versão do Node** (ou noutra máquina). Tens de **recompilar no mesmo sítio onde corres a app**:
+
+**Na pasta do projeto (ex.: `/home/zaccess/Projeto-ZAccess/device`):**
+
+```bash
+cd device
+npm rebuild pigpio
+# ou, para forçar compilação desde o código C:
+./scripts/rebuild-pigpio.sh
+```
+
+**No Raspberry com instalação em /opt:**
 
 ```bash
 sudo /opt/zaccess-device/scripts/rebuild-pigpio.sh
 ```
 
-Se os relés continuarem em "simulação" mas não houver esse erro, confira o `LD_LIBRARY_PATH`:
+- Se usares a **lib pigpio do sistema**: `sudo apt install pigpio` antes do rebuild.
+- Se usares a lib em **vendor/pigpio-install** (install.sh): ao correr à mão faz  
+  `export LD_LIBRARY_PATH=vendor/pigpio-install/lib`  
+  antes de `npm start`; em systemd o `fix-service-env.sh` já configura isso.
 
-```bash
-sudo /opt/zaccess-device/scripts/fix-service-env.sh
-```
-
-Depois teste em `http://<IP>:3080`.
+Depois de recompilar, reinicia a aplicação (ou o serviço) e testa em `http://<IP>:3080`.
 
 ### Desinstalação
 
