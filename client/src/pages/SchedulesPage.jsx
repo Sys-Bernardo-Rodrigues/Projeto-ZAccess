@@ -24,26 +24,44 @@ const actionLabels = {
 
 export default function SchedulesPage() {
     const [schedules, setSchedules] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [devices, setDevices] = useState([]);
     const [relays, setRelays] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState(null);
     const [form, setForm] = useState({
         name: '',
-        relayId: '',
+        locationId: '',
+        deviceId: '',
+        relayIds: [],
         action: 'pulse',
         time: '',
         daysOfWeek: [1, 2, 3, 4, 5],
         enabled: true,
     });
 
+    // Dispositivos filtrados pelo local selecionado
+    const devicesForLocation = form.locationId
+        ? devices.filter((d) => String(d.locationId?._id || d.locationId) === String(form.locationId))
+        : [];
+
+    // Relés filtrados pelo dispositivo selecionado
+    const relaysForDevice = form.deviceId
+        ? relays.filter((r) => String(r.deviceId?._id || r.deviceId) === String(form.deviceId))
+        : [];
+
     const loadData = useCallback(async () => {
         try {
-            const [schedulesRes, relaysRes] = await Promise.all([
+            const [schedulesRes, locationsRes, devicesRes, relaysRes] = await Promise.all([
                 api.get('/schedules'),
+                api.get('/locations'),
+                api.get('/devices'),
                 api.get('/relays'),
             ]);
             setSchedules(schedulesRes.data.data.schedules);
+            setLocations(locationsRes.data?.data?.locations ?? locationsRes.data?.locations ?? []);
+            setDevices(devicesRes.data?.data?.devices ?? devicesRes.data?.devices ?? []);
             setRelays(relaysRes.data.data.relays);
         } catch (err) {
             toast.error('Erro ao carregar agendamentos');
@@ -75,7 +93,9 @@ export default function SchedulesPage() {
         setEditingSchedule(null);
         setForm({
             name: '',
-            relayId: '',
+            locationId: '',
+            deviceId: '',
+            relayIds: [],
             action: 'pulse',
             time: '',
             daysOfWeek: [1, 2, 3, 4, 5],
@@ -86,9 +106,17 @@ export default function SchedulesPage() {
 
     const openEditModal = (schedule) => {
         setEditingSchedule(schedule);
+        const ids = (schedule.relayIds && schedule.relayIds.length)
+            ? schedule.relayIds.map((r) => r._id || r)
+            : (schedule.relayId ? [schedule.relayId._id || schedule.relayId] : []);
+        const firstRelay = schedule.relayIds?.[0] || schedule.relayId;
+        const did = firstRelay?.deviceId?._id || firstRelay?.deviceId;
+        const locId = firstRelay?.deviceId?.locationId?._id || firstRelay?.deviceId?.locationId;
         setForm({
             name: schedule.name,
-            relayId: schedule.relayId?._id || '',
+            locationId: locId || '',
+            deviceId: did || '',
+            relayIds: ids,
             action: schedule.action,
             time: schedule.time,
             daysOfWeek: schedule.daysOfWeek,
@@ -97,14 +125,56 @@ export default function SchedulesPage() {
         setShowModal(true);
     };
 
+    const handleLocationChange = (e) => {
+        const locationId = e.target.value;
+        setForm((prev) => ({
+            ...prev,
+            locationId,
+            deviceId: '',
+            relayIds: [],
+        }));
+    };
+
+    const handleDeviceChange = (e) => {
+        const deviceId = e.target.value;
+        setForm((prev) => ({
+            ...prev,
+            deviceId,
+            relayIds: [],
+        }));
+    };
+
+    const toggleRelayCheck = (relayId) => {
+        setForm((prev) => {
+            const id = String(relayId);
+            const current = prev.relayIds.map(String);
+            const next = current.includes(id)
+                ? current.filter((r) => r !== id)
+                : [...current, id];
+            return { ...prev, relayIds: next };
+        });
+    };
+
+    const toggleAllRelays = (checked) => {
+        setForm((prev) => ({
+            ...prev,
+            relayIds: checked ? relaysForDevice.map((r) => r._id) : [],
+        }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const { locationId, deviceId, ...payload } = form;
+        if (!payload.relayIds || payload.relayIds.length === 0) {
+            toast.error('Selecione ao menos um relé.');
+            return;
+        }
         try {
             if (editingSchedule) {
-                await api.put(`/schedules/${editingSchedule._id}`, form);
+                await api.put(`/schedules/${editingSchedule._id}`, payload);
                 toast.success('Agendamento atualizado!');
             } else {
-                await api.post('/schedules', form);
+                await api.post('/schedules', payload);
                 toast.success('Agendamento criado!');
             }
             setShowModal(false);
@@ -218,9 +288,14 @@ export default function SchedulesPage() {
                                     </td>
                                     <td>
                                         <div style={{ fontSize: '0.85rem' }}>
-                                            <div style={{ fontWeight: 500 }}>{s.relayId?.name || '---'}</div>
+                                            {(s.relayIds && s.relayIds.length ? s.relayIds : (s.relayId ? [s.relayId] : [])).map((r, i) => (
+                                                <div key={r._id || i} style={{ marginBottom: i > 0 ? 4 : 0 }}>
+                                                    <span style={{ fontWeight: 500 }}>{r.name}</span>
+                                                    {r.channel != null && <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>— Canal {r.channel}</span>}
+                                                </div>
+                                            ))}
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                                {s.relayId?.deviceId?.name || '---'}
+                                                {((s.relayIds && s.relayIds[0]) || s.relayId)?.deviceId?.name || '---'}
                                             </div>
                                         </div>
                                     </td>
@@ -279,21 +354,75 @@ export default function SchedulesPage() {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Relé Alvo</label>
+                                    <label className="form-label">Local</label>
                                     <select
-                                        name="relayId"
+                                        name="locationId"
                                         className="form-select"
-                                        value={form.relayId}
-                                        onChange={handleChange}
+                                        value={form.locationId}
+                                        onChange={handleLocationChange}
                                         required
                                     >
-                                        <option value="">Selecione um relé</option>
-                                        {relays.map((r) => (
-                                            <option key={r._id} value={r._id}>
-                                                {r.name} ({r.deviceId?.name})
+                                        <option value="">Selecione o local</option>
+                                        {locations.map((loc) => (
+                                            <option key={loc._id} value={loc._id}>
+                                                {loc.name}
                                             </option>
                                         ))}
                                     </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Dispositivo</label>
+                                    <select
+                                        name="deviceId"
+                                        className="form-select"
+                                        value={form.deviceId}
+                                        onChange={handleDeviceChange}
+                                        required
+                                        disabled={!form.locationId}
+                                    >
+                                        <option value="">
+                                            {form.locationId ? 'Selecione o dispositivo' : 'Selecione primeiro um local'}
+                                        </option>
+                                        {devicesForLocation.map((d) => (
+                                            <option key={d._id} value={d._id}>
+                                                {d.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Relés a acionar</label>
+                                    {!form.deviceId ? (
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                            Selecione o local e o dispositivo para listar os relés.
+                                        </p>
+                                    ) : (
+                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: 10, padding: 12, background: 'var(--bg-input)', maxHeight: 200, overflowY: 'auto' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer', fontSize: '0.9rem' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={relaysForDevice.length > 0 && form.relayIds.length === relaysForDevice.length}
+                                                    ref={(el) => {
+                                                        if (el) el.indeterminate = form.relayIds.length > 0 && form.relayIds.length < relaysForDevice.length;
+                                                    }}
+                                                    onChange={(e) => toggleAllRelays(e.target.checked)}
+                                                />
+                                                <span>Marcar todos</span>
+                                            </label>
+                                            {relaysForDevice.map((r) => (
+                                                <label key={r._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.relayIds.some((id) => String(id) === String(r._id))}
+                                                        onChange={() => toggleRelayCheck(r._id)}
+                                                    />
+                                                    <span>{r.name} {r.channel != null ? `— Canal ${r.channel}` : ''}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

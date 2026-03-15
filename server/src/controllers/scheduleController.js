@@ -13,6 +13,10 @@ exports.getSchedules = async (req, res) => {
             .populate({
                 path: 'relayId',
                 populate: { path: 'deviceId', select: 'name status' }
+            })
+            .populate({
+                path: 'relayIds',
+                populate: { path: 'deviceId', select: 'name status' }
             });
 
         res.status(200).json({
@@ -33,6 +37,12 @@ exports.getSchedules = async (req, res) => {
 exports.createSchedule = async (req, res) => {
     try {
         req.body.createdBy = req.user._id;
+        // Normalizar: se vier relayIds não enviar relayId
+        if (req.body.relayIds && req.body.relayIds.length) {
+            req.body.relayId = undefined;
+        } else if (req.body.relayId) {
+            req.body.relayIds = [req.body.relayId];
+        }
         const schedule = await Schedule.create(req.body);
 
         await ActivityLog.create({
@@ -54,6 +64,11 @@ exports.createSchedule = async (req, res) => {
  */
 exports.updateSchedule = async (req, res) => {
     try {
+        if (req.body.relayIds && req.body.relayIds.length) {
+            req.body.relayId = undefined;
+        } else if (req.body.relayId) {
+            req.body.relayIds = [req.body.relayId];
+        }
         const schedule = await Schedule.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true,

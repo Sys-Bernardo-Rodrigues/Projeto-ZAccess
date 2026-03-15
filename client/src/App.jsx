@@ -90,11 +90,12 @@ function AppRoutes() {
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="/locations" element={<LocationsPage />} />
         <Route path="/relays" element={<RelaysPage />} />
-        <Route path="/inputs" element={<InputsPage />} />
+        {/* Sensores, Automações e Health Check desativados de momento */}
+        <Route path="/inputs" element={<Navigate to="/" replace />} />
         <Route path="/schedules" element={<SchedulesPage />} />
-        <Route path="/automations" element={<AutomationsPage />} />
+        <Route path="/automations" element={<Navigate to="/" replace />} />
         <Route path="/users" element={<UsersPage />} />
-        <Route path="/monitoring" element={<MonitoringPage />} />
+        <Route path="/monitoring" element={<Navigate to="/" replace />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/logs" element={<LogsPage />} />
         <Route path="/invites" element={<InvitationsPage />} />

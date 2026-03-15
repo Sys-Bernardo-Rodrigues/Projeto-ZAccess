@@ -10,8 +10,12 @@ const scheduleSchema = new mongoose.Schema(
         relayId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Relay',
-            required: [true, 'Relé é obrigatório'],
+            default: null,
         },
+        relayIds: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Relay',
+        }],
         action: {
             type: String,
             enum: ['open', 'close', 'pulse'],
@@ -50,5 +54,15 @@ const scheduleSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+scheduleSchema.pre('validate', function (next) {
+    const hasLegacy = this.relayId != null;
+    const hasNew = this.relayIds && this.relayIds.length > 0;
+    if (!hasLegacy && !hasNew) {
+        next(new Error('Informe ao menos um relé (relayId ou relayIds).'));
+    } else {
+        next();
+    }
+});
 
 module.exports = mongoose.model('Schedule', scheduleSchema);

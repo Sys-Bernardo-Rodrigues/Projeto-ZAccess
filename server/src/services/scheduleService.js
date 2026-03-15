@@ -18,50 +18,50 @@ const initScheduleService = (io) => {
                 enabled: true,
                 daysOfWeek: currentDay,
                 time: currentTime
-            }).populate({
-                path: 'relayId',
-                populate: { path: 'deviceId' }
-            });
+            })
+                .populate({ path: 'relayId', populate: { path: 'deviceId' } })
+                .populate({ path: 'relayIds', populate: { path: 'deviceId' } });
 
             if (schedules.length > 0) {
                 logger.info(`⏰ Verificando ${schedules.length} agendamentos para ${currentTime}`);
             }
 
             for (const schedule of schedules) {
-                const relay = schedule.relayId;
-                const device = relay?.deviceId;
+                const relayList = (schedule.relayIds && schedule.relayIds.length)
+                    ? schedule.relayIds
+                    : (schedule.relayId ? [schedule.relayId] : []);
 
-                if (!relay || !device || device.status !== 'online' || !device.socketId) {
-                    logger.warn(`⚠️ Agendamento "${schedule.name}" pulado: Dispositivo offline ou não encontrado`);
-                    continue;
+                for (const relay of relayList) {
+                    const device = relay?.deviceId;
+
+                    if (!relay || !device || device.status !== 'online' || !device.socketId) {
+                        logger.warn(`⚠️ Agendamento "${schedule.name}" pulado para relé ${relay?.name}: Dispositivo offline ou não encontrado`);
+                        continue;
+                    }
+
+                    logger.info(`🚀 Executando agendamento: ${schedule.name} (${schedule.action}) no relé ${relay.name}`);
+
+                    const targetState = schedule.action === 'open' ? 'open' : 'closed';
+
+                    io.of('/devices').to(device.socketId).emit('relay:toggle', {
+                        relayId: relay._id,
+                        channel: relay.channel,
+                        gpioPin: relay.gpioPin,
+                        targetState: targetState,
+                        mode: schedule.action === 'pulse' ? 'pulse' : 'toggle',
+                        pulseDuration: relay.pulseDuration || 1000
+                    });
+
+                    await ActivityLog.create({
+                        action: 'relay_activated',
+                        description: `Agendamento automático: ${schedule.name} executou ${schedule.action} em ${relay.name}`,
+                        deviceId: device._id,
+                        metadata: { scheduleId: schedule._id }
+                    });
                 }
 
-                // Executar a ação
-                logger.info(`🚀 Executando agendamento: ${schedule.name} (${schedule.action}) no relé ${relay.name}`);
-
-                const targetState = schedule.action === 'open' ? 'open' : 'closed';
-
-                // Emitir comando para o dispositivo
-                io.of('/devices').to(device.socketId).emit('relay:toggle', {
-                    relayId: relay._id,
-                    channel: relay.channel,
-                    gpioPin: relay.gpioPin,
-                    targetState: targetState,
-                    mode: schedule.action === 'pulse' ? 'pulse' : 'toggle',
-                    pulseDuration: relay.pulseDuration || 1000
-                });
-
-                // Atualizar última execução
                 schedule.lastRun = now;
                 await schedule.save();
-
-                // Log de atividade
-                await ActivityLog.create({
-                    action: 'relay_activated',
-                    description: `Agendamento automático: ${schedule.name} executou ${schedule.action} em ${relay.name}`,
-                    deviceId: device._id,
-                    metadata: { scheduleId: schedule._id }
-                });
             }
         } catch (err) {
             logger.error('❌ Erro no serviço de agendamentos:', err);

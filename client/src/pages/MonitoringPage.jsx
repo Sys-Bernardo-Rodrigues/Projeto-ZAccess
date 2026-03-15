@@ -19,11 +19,14 @@ export default function MonitoringPage() {
     const { socket } = useSocket();
 
     const loadDevices = useCallback(async () => {
+        setLoading(true);
         try {
             const res = await api.get('/devices');
-            setDevices(res.data.data.devices);
+            const list = res.data?.data?.devices ?? [];
+            setDevices(Array.isArray(list) ? list : []);
         } catch (err) {
-            toast.error('Erro ao carregar dispositivos');
+            toast.error(err.response?.data?.message || 'Erro ao carregar dispositivos');
+            setDevices([]);
         } finally {
             setLoading(false);
         }
@@ -38,13 +41,13 @@ export default function MonitoringPage() {
 
         const handleHealthChange = (data) => {
             setDevices(prev => prev.map(d =>
-                d._id === data.deviceId ? { ...d, health: data.health } : d
+                String(d._id) === String(data.deviceId) ? { ...d, health: data.health } : d
             ));
         };
 
         const handleStatusChange = (data) => {
             setDevices(prev => prev.map(d =>
-                d._id === data.deviceId ? { ...d, status: data.status } : d
+                String(d._id) === String(data.deviceId) ? { ...d, status: data.status } : d
             ));
         };
 
@@ -79,6 +82,19 @@ export default function MonitoringPage() {
                 </button>
             </div>
 
+            {devices.length === 0 ? (
+                <div className="empty-state" style={{ padding: 48, textAlign: 'center' }}>
+                    <Activity size={48} style={{ opacity: 0.5, marginBottom: 16 }} />
+                    <p style={{ marginBottom: 8 }}>Nenhum dispositivo encontrado</p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Cadastre dispositivos em Dispositivos e certifique-se de estar logado.
+                    </p>
+                    <button className="btn btn-primary" onClick={loadDevices} style={{ marginTop: 16 }}>
+                        <RefreshCw size={18} />
+                        Tentar novamente
+                    </button>
+                </div>
+            ) : (
             <div className="grid-3">
                 {devices.map((device) => (
                     <div key={device._id} className={`card device-card ${device.status === 'offline' ? 'dimmed' : ''}`}>
@@ -164,6 +180,7 @@ export default function MonitoringPage() {
                     </div>
                 ))}
             </div>
+            )}
         </div>
     );
 }

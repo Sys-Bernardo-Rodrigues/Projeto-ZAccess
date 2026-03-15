@@ -16,7 +16,8 @@ exports.getDevices = async (req, res, next) => {
         const devices = await Device.find(filter)
             .populate('locationId', 'name address')
             .populate('relays')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean(); // Objetos simples com todos os campos (name, status, health, ipAddress, etc.)
 
         apiResponse(res, 200, { devices, count: devices.length });
     } catch (error) {

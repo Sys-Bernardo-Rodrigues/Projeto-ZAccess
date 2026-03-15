@@ -30,14 +30,21 @@ const mainNavItems = [
 
 const hardwareNavItems = [
     { path: '/relays', label: 'Relés', icon: ToggleLeft },
-    { path: '/inputs', label: 'Sensores', icon: Activity },
+];
+
+const hardwareDisabledItems = [
+    { label: 'Sensores', icon: Activity },
+    { label: 'Automações', icon: Zap },
 ];
 
 const adminNavItems = [
     { path: '/users', label: 'Usuários', icon: Users },
-    { path: '/monitoring', label: 'Health Check', icon: HeartPulse },
     { path: '/reports', label: 'Relatórios', icon: FileText },
     { path: '/logs', label: 'Atividades', icon: ScrollText },
+];
+
+const adminDisabledItems = [
+    { label: 'Health Check', icon: HeartPulse },
 ];
 
 export default function Sidebar() {
@@ -66,6 +73,14 @@ export default function Sidebar() {
             <item.icon size={20} />
             {item.label}
         </NavLink>
+    );
+
+    const renderDisabledItem = (item) => (
+        <span key={item.label} className="sidebar-link sidebar-link--disabled" aria-disabled>
+            <item.icon size={20} />
+            <span className="sidebar-link-label">{item.label}</span>
+            <span className="sidebar-link-badge">OFF</span>
+        </span>
     );
 
     return (
@@ -130,9 +145,7 @@ export default function Sidebar() {
                 <div className="sidebar-section">
                     <span className="sidebar-section-title">Hardware</span>
                     {hardwareNavItems.map(renderLink)}
-                    <NavLink to="/automations" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                        <Zap size={20} /> Automações
-                    </NavLink>
+                    {hardwareDisabledItems.map(renderDisabledItem)}
                     <NavLink to="/schedules" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                         <Calendar size={20} /> Agendamentos
                     </NavLink>
@@ -142,6 +155,7 @@ export default function Sidebar() {
                     <div className="sidebar-section">
                         <span className="sidebar-section-title">Administração</span>
                         {adminNavItems.map(renderLink)}
+                        {adminDisabledItems.map(renderDisabledItem)}
                     </div>
                 )}
             </nav>
@@ -233,6 +247,29 @@ export default function Sidebar() {
                 @keyframes pulse {
                     0% { transform: scale(1); opacity: 1; }
                     100% { transform: scale(2.5); opacity: 0; }
+                }
+                .sidebar-link--disabled {
+                    cursor: default;
+                    pointer-events: none;
+                    opacity: 0.9;
+                }
+                .sidebar-link--disabled:hover {
+                    background: transparent;
+                    color: var(--text-secondary);
+                }
+                .sidebar-link--disabled .sidebar-link-label {
+                    flex: 1;
+                }
+                .sidebar-link--disabled .sidebar-link-badge {
+                    font-size: 0.55rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    background: rgba(255, 255, 255, 0.08);
+                    color: var(--text-muted);
+                    border: 1px solid var(--border-color);
                 }
             `}</style>
         </aside>
