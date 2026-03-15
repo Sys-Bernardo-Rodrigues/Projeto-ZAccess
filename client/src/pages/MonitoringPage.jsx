@@ -71,7 +71,7 @@ export default function MonitoringPage() {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Health Check & Monitoramento</h1>
-                    <p className="page-subtitle">Status de hardware dos Raspberry Pis em tempo real</p>
+                    <p className="page-subtitle">Status de hardware dos dispositivos em tempo real</p>
                 </div>
                 <button className="btn btn-secondary" onClick={loadDevices}>
                     <RefreshCw size={18} />

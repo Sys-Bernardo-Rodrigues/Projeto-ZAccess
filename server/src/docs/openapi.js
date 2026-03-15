@@ -85,7 +85,7 @@ const options = {
                             type: 'string',
                             enum: ['door', 'gate', 'light', 'lock', 'automation', 'other'],
                         },
-                        gpioPin: { type: 'integer', example: 5, description: 'Número BCM (Raspberry Pi 4, módulo 4 canais: IN1=5, IN2=6, IN3=13, IN4=19)' },
+                        gpioPin: { type: 'integer', example: 5, description: 'Número do pino GPIO (ex.: BCM 5, 6, 13, 19 para módulo 4 canais)' },
                         state: {
                             type: 'string',
                             enum: ['open', 'closed'],
@@ -352,7 +352,7 @@ const options = {
         tags: [
             { name: 'Auth', description: 'Autenticação e usuário admin' },
             { name: 'AppAuth', description: 'Autenticação de moradores/síndicos (LocationUser)' },
-            { name: 'Devices', description: 'Dispositivos físicos (Raspberry Pi, gateways, etc.)' },
+            { name: 'Devices', description: 'Dispositivos físicos (gateways, controladores, etc.)' },
             { name: 'Relays', description: 'Relés associados a dispositivos' },
             { name: 'Inputs', description: 'Sensores / entradas digitais' },
             { name: 'Locations', description: 'Locais (condomínios, escritórios, etc.)' },

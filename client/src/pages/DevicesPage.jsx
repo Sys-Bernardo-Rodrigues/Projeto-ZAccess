@@ -99,7 +99,7 @@ export default function DevicesPage() {
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
-        toast.success('Token copiado! Cole no .env do Raspberry.');
+        toast.success('Token copiado! Cole na configuração do dispositivo.');
     };
 
     const copyDeviceToken = async (deviceId) => {
@@ -119,7 +119,7 @@ export default function DevicesPage() {
             const token = res.data?.data?.authToken;
             if (token) {
                 copyToClipboard(token);
-                toast.success('Token regenerado e copiado. Atualize o .env no Raspberry.');
+                toast.success('Token regenerado e copiado. Atualize a configuração do dispositivo.');
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Erro ao regenerar token');
@@ -216,7 +216,7 @@ export default function DevicesPage() {
                     <div className="empty-state">
                         <Cpu />
                         <h3>Nenhum dispositivo registrado</h3>
-                        <p>Registre seu primeiro Raspberry Pi para começar</p>
+                        <p>Registre seu primeiro dispositivo para começar</p>
                         <button
                             className="btn btn-primary"
                             style={{ marginTop: 16 }}
@@ -383,7 +383,7 @@ export default function DevicesPage() {
                                     <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginTop: 8 }}>
                                         <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                             <Key size={16} />
-                                            Token para o .env do Raspberry (copie agora)
+                                            Token do dispositivo (copie agora)
                                         </label>
                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                                             <code style={{ fontSize: 11, wordBreak: 'break-all', flex: 1, minWidth: 0 }}>{createdToken}</code>
@@ -400,7 +400,7 @@ export default function DevicesPage() {
                                     <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginTop: 8 }}>
                                         <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                             <Key size={16} />
-                                            Token do dispositivo (para .env no Raspberry)
+                                            Token do dispositivo
                                         </label>
                                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                             <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyDeviceToken(editingDevice._id)}>

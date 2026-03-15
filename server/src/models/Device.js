@@ -35,7 +35,7 @@ const deviceSchema = new mongoose.Schema(
         metadata: {
             model: {
                 type: String,
-                default: 'Raspberry Pi 4 Model B',
+                default: 'Gateway IoT',
             },
             firmware: {
                 type: String,

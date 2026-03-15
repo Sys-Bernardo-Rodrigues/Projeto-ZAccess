@@ -9,7 +9,7 @@ const generateSerialNumber = (prefix = 'RPi4') => {
 };
 
 /**
- * Gera um token de autenticação para o dispositivo (usar no .env do Raspberry)
+ * Gera um token de autenticação para o dispositivo
  */
 const generateAuthToken = () => crypto.randomBytes(32).toString('hex');
 

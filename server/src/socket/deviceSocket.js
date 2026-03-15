@@ -10,14 +10,14 @@ const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const HEARTBEAT_TIMEOUT = 90000;  // 90 seconds
 
 module.exports = (io) => {
-    // Namespace para dispositivos (Raspberry Pi)
+    // Namespace para dispositivos
     const deviceNsp = io.of('/devices');
 
     // Namespace para dashboard (Frontend)
     const dashboardNsp = io.of('/dashboard');
 
     // ========================================
-    // DISPOSITIVOS (Raspberry Pi clients)
+    // DISPOSITIVOS (clientes de campo)
     // ========================================
     deviceNsp.on('connection', async (socket) => {
         const { serialNumber, authToken } = socket.handshake.auth;

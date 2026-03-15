@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 
 /**
  * Envia a configuração atualizada (relés e sensores) para o dispositivo,
- * se ele estiver conectado via WebSocket. Assim o Raspberry sincroniza
+ * se ele estiver conectado via WebSocket. Assim o dispositivo sincroniza
  * quando um relé/sensor é criado, editado ou removido no painel.
  */
 async function pushDeviceConfig(io, deviceId) {

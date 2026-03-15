@@ -75,7 +75,7 @@ exports.createDevice = async (req, res, next) => {
 
         logger.info(`Device registered: ${name} (${serialNumber})`);
         const deviceObj = device.toObject();
-        apiResponse(res, 201, { device: deviceObj, authToken }, 'Dispositivo registrado. Copie o token para o .env do Raspberry.');
+        apiResponse(res, 201, { device: deviceObj, authToken }, 'Dispositivo registrado. Copie o token para configurar o dispositivo.');
     } catch (error) {
         next(error);
     }
@@ -152,7 +152,7 @@ exports.regenerateAuthToken = async (req, res, next) => {
         });
 
         logger.info(`Auth token regenerated for device: ${device.name}`);
-        apiResponse(res, 200, { authToken }, 'Token regenerado. Atualize o .env no Raspberry.');
+        apiResponse(res, 200, { authToken }, 'Token regenerado. Atualize a configuração do dispositivo.');
     } catch (error) {
         next(error);
     }

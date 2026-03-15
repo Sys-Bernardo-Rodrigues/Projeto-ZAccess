@@ -36,21 +36,21 @@ const seed = async () => {
         });
         console.log('✅ Local criado: Escritório Central');
 
-        // 4. Criar Dispositivo (Raspberry Pi)
+        // 4. Criar Dispositivo
         const device = await Device.create({
-            name: 'RPI-GATEWAY-01',
-            serialNumber: 'RPi4-TEST-001',
+            name: 'GATEWAY-01',
+            serialNumber: 'GW-TEST-001',
             locationId: local._id,
             status: 'offline',
             metadata: {
-                model: 'Raspberry Pi 4 Model B',
+                model: 'Gateway IoT',
                 firmware: '1.0.0',
                 totalRelays: 4
             }
         });
-        console.log('✅ Dispositivo criado: RPI-GATEWAY-01 (Serial: RPi4-TEST-001)');
+        console.log('✅ Dispositivo criado: GATEWAY-01 (Serial: GW-TEST-001)');
 
-        // 5. Criar Relés para o dispositivo (gpioPin = número BCM no Raspberry Pi 4: 5, 6, 13, 19)
+        // 5. Criar Relés para o dispositivo (gpioPin = número BCM: 5, 6, 13, 19)
         const relayData = [
             { name: 'Porta Principal', type: 'door', channel: 1, gpioPin: 5, mode: 'pulse', deviceId: device._id },
             { name: 'Portão Garagem', type: 'gate', channel: 2, gpioPin: 6, mode: 'pulse', deviceId: device._id },

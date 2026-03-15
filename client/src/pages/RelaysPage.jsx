@@ -392,7 +392,7 @@ export default function RelaysPage() {
                                             min="0"
                                             max="40"
                                         />
-                                        <small className="form-hint">Raspberry Pi 4 (módulo 4 canais): BCM 5, 6, 13, 19</small>
+                                        <small className="form-hint">Ex.: BCM 5, 6, 13, 19 para módulo 4 canais</small>
                                     </div>
 
                                     <div className="form-group">

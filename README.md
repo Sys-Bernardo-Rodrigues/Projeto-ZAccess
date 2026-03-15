@@ -1,13 +1,12 @@
 # Zaccess – Controle de dispositivos IoT
 
-Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locais, agendamentos, automações e convites de acesso. Inclui **API**, **painel web**, **cliente Raspberry Pi** e **app Flutter**.
+Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locais, agendamentos, automações e convites de acesso. Inclui **API**, **painel web** e **app Flutter**.
 
 ## Visão geral da arquitetura
 
 ```
 ├── server/              # API Node.js (Express + MongoDB + Redis + Socket.IO)
 ├── client/              # Painel web React (Vite) – admin
-├── raspberry/           # Cliente para Raspberry Pi (GPIO, painel local)
 ├── app/                 # App Flutter – moradores e síndicos
 ├── docker-compose.yml   # MongoDB e Redis
 └── .env                 # Variáveis de ambiente (copiar de .env.example)
@@ -15,14 +14,13 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
 
 **Fluxo principal**
 - **Admin** usa o painel (`client`) para gerenciar locais, dispositivos, relés, sensores, agendamentos, automações e convites.
-- **Dispositivos** (Raspberry Pi) conectam-se via WebSocket à API (`server`) para controle em tempo real.
+- **Dispositivos** conectam-se via WebSocket à API (`server`) para controle em tempo real.
 - **Moradores/síndicos** usam o **app Flutter** para acionar relés, criar convites e visualizar logs do local.
 
 ## Pré-requisitos
 
 - **Node.js** 18+
 - **Docker** e **Docker Compose** (MongoDB e Redis)
-- **Raspberry Pi 4/3** com Node.js 18+ (cliente de campo)
 - **Flutter SDK** (para o app em `app/`)
 
 ## Configuração (dev local)
@@ -70,14 +68,7 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
    - Painel: **http://localhost:5173**
    - Proxy `/api` e `/socket.io` → **http://localhost:3000**
 
-5. **Raspberry Pi**
-
-   Veja `raspberry/README.md` para:
-   - copiar apenas a pasta `raspberry` para o Pi;
-   - rodar `install-pi.sh`;
-   - configurar URL do servidor, serial e token pelo painel local (`:5080`).
-
-6. **App Flutter (moradores/síndicos)**
+5. **App Flutter (moradores/síndicos)**
 
    Veja `app/README.md` para detalhes. Exemplo (web):
 
@@ -130,7 +121,6 @@ O servidor lê o `.env` da **raiz do repositório**.
 | server | `npm run dev` | API em modo desenvolvimento |
 | server | `npm run seed` | Popula banco (admin) |
 | client | `npm run dev` | Painel em desenvolvimento |
-| raspberry | `npm start` | Cliente no Pi; painel local em `:5080` |
 
 ## Licença
 
