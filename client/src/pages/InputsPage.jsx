@@ -38,6 +38,7 @@ const stateLabels = {
 
 export default function InputsPage() {
     const [inputs, setInputs] = useState([]);
+    const [locations, setLocations] = useState([]);
     const [devices, setDevices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -47,17 +48,24 @@ export default function InputsPage() {
         type: 'door_sensor',
         gpioPin: '',
         activeLow: true,
+        locationId: '',
         deviceId: '',
     });
 
+    const devicesForLocation = form.locationId
+        ? devices.filter((d) => String(d.locationId?._id || d.locationId) === String(form.locationId))
+        : devices;
+
     const loadData = useCallback(async () => {
         try {
-            const [inputsRes, devicesRes] = await Promise.all([
+            const [inputsRes, devicesRes, locationsRes] = await Promise.all([
                 api.get('/inputs'),
                 api.get('/devices'),
+                api.get('/locations'),
             ]);
             setInputs(inputsRes.data?.data?.inputs ?? []);
-            setDevices(devicesRes.data?.data?.devices ?? []);
+            setDevices(devicesRes.data?.data?.devices ?? devicesRes.data?.devices ?? []);
+            setLocations(locationsRes.data?.data?.locations ?? locationsRes.data?.locations ?? []);
         } catch (err) {
             toast.error('Erro ao carregar sensores');
         } finally {
@@ -80,10 +88,20 @@ export default function InputsPage() {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setForm({
-            ...form,
+
+        if (name === 'locationId') {
+            setForm((prev) => ({
+                ...prev,
+                locationId: value,
+                deviceId: '',
+            }));
+            return;
+        }
+
+        setForm((prev) => ({
+            ...prev,
             [name]: type === 'checkbox' ? checked : value,
-        });
+        }));
     };
 
     const openCreateModal = () => {
@@ -93,19 +111,23 @@ export default function InputsPage() {
             type: 'door_sensor',
             gpioPin: '',
             activeLow: true,
+            locationId: '',
             deviceId: '',
         });
         setShowModal(true);
     };
 
     const openEditModal = (input) => {
+        const deviceId = input.deviceId?._id || input.deviceId;
+        const locationId = input.deviceId?.locationId?._id || input.deviceId?.locationId || '';
         setEditingInput(input);
         setForm({
             name: input.name,
             type: input.type,
             gpioPin: input.gpioPin.toString(),
             activeLow: input.activeLow,
-            deviceId: input.deviceId?._id || '',
+            locationId: locationId || '',
+            deviceId: deviceId || '',
         });
         setShowModal(true);
     };
@@ -353,22 +375,41 @@ export default function InputsPage() {
                                     </div>
                                 </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">Dispositivo</label>
-                                    <select
-                                        name="deviceId"
-                                        className="form-select"
-                                        value={form.deviceId}
-                                        onChange={handleChange}
-                                        required
-                                    >
-                                        <option value="">Selecione um dispositivo</option>
-                                        {devices.map((dev) => (
-                                            <option key={dev._id} value={dev._id}>
-                                                {dev.name} ({dev.serialNumber})
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Local</label>
+                                        <select
+                                            name="locationId"
+                                            className="form-select"
+                                            value={form.locationId}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="">Meu local</option>
+                                            {locations.map((loc) => (
+                                                <option key={loc._id} value={loc._id}>
+                                                    {loc.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Dispositivo</label>
+                                        <select
+                                            name="deviceId"
+                                            className="form-select"
+                                            value={form.deviceId}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="">Selecione um dispositivo</option>
+                                            {devicesForLocation.map((dev) => (
+                                                <option key={dev._id} value={dev._id}>
+                                                    {dev.name} ({dev.serialNumber})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

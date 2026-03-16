@@ -176,7 +176,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         final name = r['name'] as String? ?? 'Porta';
                         final state = r['state'] as String? ?? 'closed';
                         final type = r['type'] as String?;
-                        final isOpen = state == 'open';
+                        final mode = r['mode'] as String?;
+                        final isPulse = mode == 'pulse';
+                        // Para relés em modo pulso, sempre mostramos como
+                        // "fechado" na UI, para o botão permanecer em "Abrir".
+                        final isOpen = !isPulse && state == 'open';
                         final isToggling = id != null && _togglingRelayId == id;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -199,12 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.xxl),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _MenuTile(
-                      icon: Icons.auto_awesome_rounded,
-                      title: 'Automações',
-                      subtitle: 'Ver automações do local',
-                      onTap: () => Navigator.pushNamed(context, '/automations'),
-                    ),
                     _MenuTile(
                       icon: Icons.mail_outline_rounded,
                       title: 'Convites',

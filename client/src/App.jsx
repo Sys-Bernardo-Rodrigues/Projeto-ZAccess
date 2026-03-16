@@ -14,6 +14,7 @@ import InputsPage from './pages/InputsPage';
 import SchedulesPage from './pages/SchedulesPage';
 import LogsPage from './pages/LogsPage';
 import AutomationsPage from './pages/AutomationsPage';
+import EventsPage from './pages/EventsPage';
 import UsersPage from './pages/UsersPage';
 import MonitoringPage from './pages/MonitoringPage';
 import SettingsPage from './pages/SettingsPage';
@@ -93,6 +94,8 @@ function AppRoutes() {
         <Route path="/inputs" element={<InputsPage />} />
         <Route path="/schedules" element={<SchedulesPage />} />
         <Route path="/automations" element={<AutomationsPage />} />
+        <Route path="/eventos" element={<EventsPage />} />
+        <Route path="/eventos" element={<Navigate to="/" replace />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/monitoring" element={<Navigate to="/" replace />} />
         <Route path="/reports" element={<ReportsPage />} />

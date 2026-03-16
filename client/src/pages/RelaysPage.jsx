@@ -36,6 +36,7 @@ const typeLabels = {
 
 export default function RelaysPage() {
     const [relays, setRelays] = useState([]);
+    const [locations, setLocations] = useState([]);
     const [devices, setDevices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [toggling, setToggling] = useState(null);
@@ -48,17 +49,24 @@ export default function RelaysPage() {
         channel: '',
         mode: 'pulse',
         pulseDuration: 1000,
+        locationId: '',
         deviceId: '',
     });
 
+    const devicesForLocation = form.locationId
+        ? devices.filter((d) => String(d.locationId?._id || d.locationId) === String(form.locationId))
+        : devices;
+
     const loadRelays = useCallback(async () => {
         try {
-            const [relaysRes, devicesRes] = await Promise.all([
+            const [relaysRes, devicesRes, locationsRes] = await Promise.all([
                 api.get('/relays'),
                 api.get('/devices'),
+                api.get('/locations'),
             ]);
-            setRelays(relaysRes.data.data.relays);
-            setDevices(devicesRes.data.data.devices);
+            setRelays(relaysRes.data?.data?.relays ?? relaysRes.data?.relays ?? []);
+            setDevices(devicesRes.data?.data?.devices ?? devicesRes.data?.devices ?? []);
+            setLocations(locationsRes.data?.data?.locations ?? locationsRes.data?.locations ?? []);
         } catch (err) {
             toast.error('Erro ao carregar relés');
         } finally {
@@ -80,7 +88,18 @@ export default function RelaysPage() {
     }, [loadRelays]);
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+
+        if (name === 'locationId') {
+            setForm((prev) => ({
+                ...prev,
+                locationId: value,
+                deviceId: '',
+            }));
+            return;
+        }
+
+        setForm((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleToggle = async (relay) => {
@@ -115,6 +134,7 @@ export default function RelaysPage() {
             channel: '',
             mode: 'pulse',
             pulseDuration: 1000,
+            locationId: '',
             deviceId: '',
         });
         setShowModal(true);
@@ -287,6 +307,8 @@ export default function RelaysPage() {
                                                 <button
                                                     className="btn btn-icon btn-secondary btn-sm"
                                                     onClick={() => {
+                                                        const deviceId = relay.deviceId?._id || relay.deviceId;
+                                                        const locationId = relay.deviceId?.locationId?._id || relay.deviceId?.locationId || '';
                                                         setEditingRelay(relay);
                                                         setForm({
                                                             name: relay.name,
@@ -295,7 +317,8 @@ export default function RelaysPage() {
                                                             channel: relay.channel.toString(),
                                                             mode: relay.mode,
                                                             pulseDuration: relay.pulseDuration,
-                                                            deviceId: relay.deviceId?._id || '',
+                                                            locationId: locationId || '',
+                                                            deviceId: deviceId || '',
                                                         });
                                                         setShowModal(true);
                                                     }}
@@ -424,22 +447,41 @@ export default function RelaysPage() {
                                     />
                                 </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">Dispositivo</label>
-                                    <select
-                                        name="deviceId"
-                                        className="form-select"
-                                        value={form.deviceId}
-                                        onChange={handleChange}
-                                        required
-                                    >
-                                        <option value="">Selecione um dispositivo</option>
-                                        {devices.map((dev) => (
-                                            <option key={dev._id} value={dev._id}>
-                                                {dev.name} ({dev.serialNumber})
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Local</label>
+                                        <select
+                                            name="locationId"
+                                            className="form-select"
+                                            value={form.locationId}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="">Meu local</option>
+                                            {locations.map((loc) => (
+                                                <option key={loc._id} value={loc._id}>
+                                                    {loc.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Dispositivo</label>
+                                        <select
+                                            name="deviceId"
+                                            className="form-select"
+                                            value={form.deviceId}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="">Selecione um dispositivo</option>
+                                            {devicesForLocation.map((dev) => (
+                                                <option key={dev._id} value={dev._id}>
+                                                    {dev.name} ({dev.serialNumber})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             <div className="modal-footer">

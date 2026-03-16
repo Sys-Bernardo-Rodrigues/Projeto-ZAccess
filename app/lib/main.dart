@@ -5,7 +5,6 @@ import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/automations_screen.dart';
 import 'screens/invites_screen.dart';
 import 'screens/logs_screen.dart';
 
@@ -43,7 +42,6 @@ class ZaccessApp extends StatelessWidget {
       routes: {
         '/home': (_) => const HomeScreen(),
         '/login': (_) => const LoginScreen(),
-        '/automations': (_) => const AutomationsScreen(),
         '/invites': (_) => const InvitesScreen(),
         '/logs': (_) => const LogsScreen(),
       },

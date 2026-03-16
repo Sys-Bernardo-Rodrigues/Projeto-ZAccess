@@ -11,6 +11,7 @@ const pageTitles = {
     '/inputs': { title: 'Sensores', subtitle: 'Monitoramento de entradas' },
     '/schedules': { title: 'Agendamentos', subtitle: 'Eventos programados por horário' },
     '/automations': { title: 'Automações', subtitle: 'Regras automáticas disparadas por sensores' },
+    '/eventos': { title: 'Eventos', subtitle: 'Regras por tempo de sensor' },
     '/invites': { title: 'Convites & Acessos', subtitle: 'Links temporários para visitantes' },
     '/users': { title: 'Usuários', subtitle: 'Gestão de permissões e acessos' },
     '/monitoring': { title: 'Health Check', subtitle: 'Status de hardware em tempo real' },

@@ -16,6 +16,8 @@ import {
 
 export default function AutomationsPage() {
     const [automations, setAutomations] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [devices, setDevices] = useState([]);
     const [inputs, setInputs] = useState([]);
     const [relays, setRelays] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -23,6 +25,8 @@ export default function AutomationsPage() {
     const [editingAuto, setEditingAuto] = useState(null);
     const [form, setForm] = useState({
         name: '',
+        locationId: '',
+        deviceId: '',
         enabled: true,
         trigger: {
             inputId: '',
@@ -35,14 +39,30 @@ export default function AutomationsPage() {
         },
     });
 
+    const devicesForLocation = form.locationId
+        ? devices.filter((d) => String(d.locationId?._id || d.locationId) === String(form.locationId))
+        : devices;
+
+    const inputsForDevice = form.deviceId
+        ? inputs.filter((i) => String(i.deviceId?._id || i.deviceId) === String(form.deviceId))
+        : inputs;
+
+    const relaysForDevice = form.deviceId
+        ? relays.filter((r) => String(r.deviceId?._id || r.deviceId) === String(form.deviceId))
+        : relays;
+
     const loadData = useCallback(async () => {
         try {
-            const [autoRes, inputsRes, relaysRes] = await Promise.all([
+            const [autoRes, locationsRes, devicesRes, inputsRes, relaysRes] = await Promise.all([
                 api.get('/automations'),
+                api.get('/locations'),
+                api.get('/devices'),
                 api.get('/inputs'),
                 api.get('/relays'),
             ]);
             setAutomations(autoRes.data?.data?.automations ?? []);
+            setLocations(locationsRes.data?.data?.locations ?? locationsRes.data?.locations ?? []);
+            setDevices(devicesRes.data?.data?.devices ?? devicesRes.data?.devices ?? []);
             setInputs(inputsRes.data?.data?.inputs ?? []);
             setRelays(relaysRes.data?.data?.relays ?? []);
         } catch (err) {
@@ -60,6 +80,8 @@ export default function AutomationsPage() {
         setEditingAuto(null);
         setForm({
             name: '',
+            locationId: '',
+            deviceId: '',
             enabled: true,
             trigger: {
                 inputId: '',
@@ -75,9 +97,26 @@ export default function AutomationsPage() {
     };
 
     const openEditModal = (auto) => {
+        const input = auto.trigger?.inputId;
+        const relay = auto.action?.relayId;
+        const deviceFromInput = input?.deviceId;
+        const deviceFromRelay = relay?.deviceId;
+        const deviceId =
+            (deviceFromInput && (deviceFromInput._id || deviceFromInput)) ||
+            (deviceFromRelay && (deviceFromRelay._id || deviceFromRelay)) ||
+            '';
+        const locationId =
+            deviceFromInput?.locationId?._id ||
+            deviceFromInput?.locationId ||
+            deviceFromRelay?.locationId?._id ||
+            deviceFromRelay?.locationId ||
+            '';
+
         setEditingAuto(auto);
         setForm({
             name: auto.name,
+            locationId: locationId || '',
+            deviceId: deviceId || '',
             enabled: auto.enabled,
             trigger: {
                 inputId: auto.trigger.inputId?._id || auto.trigger.inputId,
@@ -127,6 +166,27 @@ export default function AutomationsPage() {
         } catch (err) {
             toast.error('Erro ao alterar status');
         }
+    };
+
+    const handleLocationChange = (e) => {
+        const value = e.target.value;
+        setForm((prev) => ({
+            ...prev,
+            locationId: value,
+            deviceId: '',
+            trigger: { ...prev.trigger, inputId: '' },
+            action: { ...prev.action, relayId: '' },
+        }));
+    };
+
+    const handleDeviceChange = (e) => {
+        const value = e.target.value;
+        setForm((prev) => ({
+            ...prev,
+            deviceId: value,
+            trigger: { ...prev.trigger, inputId: '' },
+            action: { ...prev.action, relayId: '' },
+        }));
     };
 
     if (loading) return <div className="loading-spinner"><div className="spinner" /></div>;
@@ -262,15 +322,57 @@ export default function AutomationsPage() {
                                     </h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                         <div className="form-group">
+                                            <label className="form-label">Local</label>
+                                            <select
+                                                className="form-select"
+                                                value={form.locationId}
+                                                onChange={handleLocationChange}
+                                            >
+                                                <option value="">Meu local</option>
+                                                {locations.map((loc) => (
+                                                    <option key={loc._id} value={loc._id}>
+                                                        {loc.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Dispositivo</label>
+                                            <select
+                                                className="form-select"
+                                                value={form.deviceId}
+                                                onChange={handleDeviceChange}
+                                            >
+                                                <option value="">Selecione...</option>
+                                                {devicesForLocation.map((dev) => (
+                                                    <option key={dev._id} value={dev._id}>
+                                                        {dev.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+                                        <div className="form-group">
                                             <label className="form-label">Sensor</label>
                                             <select
                                                 className="form-select"
                                                 value={form.trigger.inputId}
-                                                onChange={(e) => setForm({ ...form, trigger: { ...form.trigger, inputId: e.target.value } })}
+                                                onChange={(e) =>
+                                                    setForm((prev) => ({
+                                                        ...prev,
+                                                        trigger: { ...prev.trigger, inputId: e.target.value },
+                                                    }))
+                                                }
                                                 required
                                             >
                                                 <option value="">Selecione...</option>
-                                                {inputs.map(i => <option key={i._id} value={i._id}>{i.name}</option>)}
+                                                {inputsForDevice.map((i) => (
+                                                    <option key={i._id} value={i._id}>
+                                                        {i.name}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div className="form-group">
@@ -278,7 +380,12 @@ export default function AutomationsPage() {
                                             <select
                                                 className="form-select"
                                                 value={form.trigger.condition}
-                                                onChange={(e) => setForm({ ...form, trigger: { ...form.trigger, condition: e.target.value } })}
+                                                onChange={(e) =>
+                                                    setForm((prev) => ({
+                                                        ...prev,
+                                                        trigger: { ...prev.trigger, condition: e.target.value },
+                                                    }))
+                                                }
                                             >
                                                 <option value="active">Acionado (ON)</option>
                                                 <option value="inactive">Desligado (OFF)</option>
@@ -296,11 +403,20 @@ export default function AutomationsPage() {
                                         <select
                                             className="form-select"
                                             value={form.action.relayId}
-                                            onChange={(e) => setForm({ ...form, action: { ...form.action, relayId: e.target.value } })}
+                                            onChange={(e) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    action: { ...prev.action, relayId: e.target.value },
+                                                }))
+                                            }
                                             required
                                         >
                                             <option value="">Selecione...</option>
-                                            {relays.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
+                                            {relaysForDevice.map((r) => (
+                                                <option key={r._id} value={r._id}>
+                                                    {r.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -309,7 +425,12 @@ export default function AutomationsPage() {
                                             <select
                                                 className="form-select"
                                                 value={form.action.command}
-                                                onChange={(e) => setForm({ ...form, action: { ...form.action, command: e.target.value } })}
+                                                onChange={(e) =>
+                                                    setForm((prev) => ({
+                                                        ...prev,
+                                                        action: { ...prev.action, command: e.target.value },
+                                                    }))
+                                                }
                                             >
                                                 <option value="pulse">Dar Pulso</option>
                                                 <option value="on">Ligar</option>
@@ -323,7 +444,15 @@ export default function AutomationsPage() {
                                                     type="number"
                                                     className="form-input"
                                                     value={form.action.duration}
-                                                    onChange={(e) => setForm({ ...form, action: { ...form.action, duration: parseInt(e.target.value) } })}
+                                                    onChange={(e) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            action: {
+                                                                ...prev.action,
+                                                                duration: parseInt(e.target.value, 10) || 0,
+                                                            },
+                                                        }))
+                                                    }
                                                     min="100"
                                                     max="5000"
                                                 />

@@ -36,6 +36,7 @@ const hardwareNavItems = [
     { path: '/relays', label: 'Relés', icon: ToggleLeft },
     { path: '/inputs', label: 'Sensores', icon: Activity },
     { path: '/automations', label: 'Automações', icon: Zap },
+    { path: '/eventos', label: 'Eventos', icon: Activity },
 ];
 
 const adminNavItems = [
