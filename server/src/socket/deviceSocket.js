@@ -21,7 +21,6 @@ module.exports = (io) => {
     // ========================================
     deviceNsp.on('connection', async (socket) => {
         const { serialNumber, authToken } = socket.handshake.auth;
-        logger.info(`🔌 Device attempting connection: ${serialNumber} (${socket.id})`);
 
         if (!serialNumber) {
             logger.warn(`Device connection rejected: no serial number`);
@@ -80,7 +79,6 @@ module.exports = (io) => {
             });
 
             socket.join(serialNumber);
-            logger.info(`✅ Device connected: ${device.name} (${serialNumber})`);
 
             // Enviar configuração dos relés e sensores para o dispositivo
             const [relays, inputs] = await Promise.all([
@@ -155,7 +153,6 @@ module.exports = (io) => {
                         timestamp: new Date(),
                     });
 
-                    logger.info(`Relay state update: ${relay?.name} -> ${state}`);
                 } catch (err) {
                     logger.error('Relay state update error:', err);
                 }
@@ -202,10 +199,9 @@ module.exports = (io) => {
                         });
                     }
 
-                    // Processar automações
-                    automationService.processInputTrigger(inputId, state);
-
-                    logger.info(`Input state change: ${input?.name} -> ${state}`);
+                    automationService.processInputTrigger(inputId, state).catch((err) =>
+                        logger.error('Input automation error:', err)
+                    );
                 } catch (err) {
                     logger.error('Input state change error:', err);
                 }
@@ -266,7 +262,6 @@ module.exports = (io) => {
                         timestamp: new Date(),
                     });
 
-                    logger.info(`🔌 Device disconnected: ${device.name} (${reason})`);
                 } catch (err) {
                     logger.error('Disconnect handler error:', err);
                 }
@@ -281,12 +276,6 @@ module.exports = (io) => {
     // DASHBOARD (Frontend clients)
     // ========================================
     dashboardNsp.on('connection', (socket) => {
-        logger.info(`📊 Dashboard client connected: ${socket.id}`);
-
-        socket.on('disconnect', () => {
-            logger.info(`📊 Dashboard client disconnected: ${socket.id}`);
-        });
+        socket.on('disconnect', () => {});
     });
-
-    logger.info('🔌 Socket.IO handlers initialized');
 };

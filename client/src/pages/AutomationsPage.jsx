@@ -42,9 +42,9 @@ export default function AutomationsPage() {
                 api.get('/inputs'),
                 api.get('/relays'),
             ]);
-            setAutomations(autoRes.data.data.automations);
-            setInputs(inputsRes.data.data.inputs);
-            setRelays(relaysRes.data.data.relays);
+            setAutomations(autoRes.data?.data?.automations ?? []);
+            setInputs(inputsRes.data?.data?.inputs ?? []);
+            setRelays(relaysRes.data?.data?.relays ?? []);
         } catch (err) {
             toast.error('Erro ao carregar dados');
         } finally {

@@ -56,8 +56,8 @@ export default function InputsPage() {
                 api.get('/inputs'),
                 api.get('/devices'),
             ]);
-            setInputs(inputsRes.data.data.inputs);
-            setDevices(devicesRes.data.data.devices);
+            setInputs(inputsRes.data?.data?.inputs ?? []);
+            setDevices(devicesRes.data?.data?.devices ?? []);
         } catch (err) {
             toast.error('Erro ao carregar sensores');
         } finally {
@@ -258,7 +258,6 @@ export default function InputsPage() {
                                                         title="Simular Emergência"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            console.log('Simulando emergência...');
                                                             window.dispatchEvent(new CustomEvent('notification-alert', {
                                                                 detail: {
                                                                     type: 'emergency',

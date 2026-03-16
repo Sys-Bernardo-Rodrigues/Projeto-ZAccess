@@ -1,7 +1,6 @@
+const mongoose = require('mongoose');
 const Automation = require('../models/Automation');
-const Input = require('../models/Input');
 const Relay = require('../models/Relay');
-const Device = require('../models/Device');
 const logger = require('../utils/logger');
 const ActivityLog = require('../models/ActivityLog');
 
@@ -15,75 +14,81 @@ class AutomationService {
 
     init(io) {
         this.io = io;
-        logger.info('🤖 Rule Engine (Automation Service) initialized');
     }
 
     async processInputTrigger(inputId, state) {
+        if (!this.io) return;
         try {
-            // Find enabled automations triggered by this input and state
+            const inputIdObj = typeof inputId === 'string' && mongoose.Types.ObjectId.isValid(inputId)
+                ? new mongoose.Types.ObjectId(inputId)
+                : inputId;
+
             const automations = await Automation.find({
-                'trigger.inputId': inputId,
+                'trigger.inputId': inputIdObj,
                 'trigger.condition': state,
                 enabled: true
-            }).populate('action.relayId');
+            }).populate('action.relayId').lean();
 
             if (automations.length === 0) return;
 
+            const now = new Date();
             for (const auto of automations) {
-                logger.info(`🤖 Running automation: ${auto.name}`);
-
-                if (auto.action.type === 'relay_control') {
+                const actionType = auto.action?.type;
+                if (actionType === 'relay_control' || !actionType) {
                     await this.executeRelayAction(auto);
                 }
-
-                // Update last run
-                auto.lastRun = new Date();
-                await auto.save();
+                Automation.updateOne({ _id: auto._id }, { lastRun: now }).catch(() => {});
             }
         } catch (err) {
-            logger.error(`Error in processInputTrigger: ${err.message}`);
+            logger.error(`Automation processInputTrigger: ${err.message}`);
         }
     }
 
     async executeRelayAction(automation) {
-        const { relayId, command, duration } = automation.action;
+        const action = automation.action;
+        if (!action || !action.relayId) return;
 
-        if (!relayId) return;
+        const relayIdRaw = action.relayId._id || action.relayId;
+        const command = action.command || 'pulse';
+        const duration = action.duration != null ? action.duration : 1000;
 
         try {
-            const relay = await Relay.findById(relayId).populate('deviceId');
+            const relay = await Relay.findById(relayIdRaw).populate('deviceId', 'name serialNumber status socketId').lean();
             if (!relay || !relay.deviceId) return;
 
             const device = relay.deviceId;
+            if (device.status !== 'online') return;
 
-            // Check if device is online
-            if (device.status !== 'online') {
-                logger.warn(`🤖 Automation ${automation.name} failed: Device ${device.name} is offline`);
-                return;
-            }
+            const target = device.socketId || device.serialNumber;
+            if (!target) return;
 
-            // Emit command to device via Socket.IO
-            // Note: We need the socket ID of the device. We can find it through the namespace.
             const deviceNsp = this.io.of('/devices');
+            const isPulse = command === 'pulse';
+            const targetState = command === 'off' ? 'closed' : 'open';
+            const mode = isPulse ? 'pulse' : 'toggle';
+            const pulseDuration = isPulse ? duration : (relay.pulseDuration ?? 1000);
 
-            // Send command
-            deviceNsp.to(device.serialNumber).emit('relay:control', {
+            const payload = {
                 relayId: relay._id,
-                command,
-                duration: command === 'pulse' ? duration : undefined
-            });
+                channel: relay.channel,
+                gpioPin: relay.gpioPin,
+                targetState,
+                mode,
+                pulseDuration,
+                timestamp: new Date().toISOString(),
+            };
 
-            // Log activity
-            await ActivityLog.create({
+            deviceNsp.to(target).emit('relay:toggle', payload);
+
+            ActivityLog.create({
                 action: 'automation_executed',
-                description: `🤖 Automação "${automation.name}" executou comando ${command} no relé ${relay.name}`,
+                description: `Automação "${automation.name}" executou ${command} no relé ${relay.name}`,
                 deviceId: device._id,
                 relayId: relay._id,
                 severity: 'info'
-            });
-
+            }).catch(() => {});
         } catch (err) {
-            logger.error(`Error executing automation relay action: ${err.message}`);
+            logger.error(`Automation executeRelayAction: ${err.message}`);
         }
     }
 }

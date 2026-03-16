@@ -13,15 +13,8 @@ export function SocketProvider({ children }) {
             transports: ['websocket', 'polling'],
         });
 
-        newSocket.on('connect', () => {
-            console.log('📊 Dashboard connected to server');
-            setConnected(true);
-        });
-
-        newSocket.on('disconnect', () => {
-            console.log('📊 Dashboard disconnected');
-            setConnected(false);
-        });
+        newSocket.on('connect', () => setConnected(true));
+        newSocket.on('disconnect', () => setConnected(false));
 
         // Listen for device status changes
         newSocket.on('device:status-change', (data) => {

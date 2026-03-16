@@ -20,15 +20,32 @@ exports.getAutomations = async (req, res) => {
     }
 };
 
+function normalizeAutomationBody(body) {
+    const trigger = body.trigger && typeof body.trigger === 'object'
+        ? {
+            type: body.trigger.type || 'input_state_change',
+            inputId: body.trigger.inputId,
+            condition: body.trigger.condition || 'active'
+        }
+        : body.trigger;
+    const action = body.action && typeof body.action === 'object'
+        ? {
+            type: body.action.type || 'relay_control',
+            relayId: body.action.relayId,
+            command: body.action.command || 'pulse',
+            duration: body.action.duration != null ? body.action.duration : 1000
+        }
+        : body.action;
+    return { ...body, trigger, action };
+}
+
 exports.createAutomation = async (req, res) => {
     try {
-        const automation = await Automation.create({
-            ...req.body,
-            createdBy: req.user.id
-        });
+        const payload = normalizeAutomationBody({ ...req.body, createdBy: req.user.id });
+        const automation = await Automation.create(payload);
 
         await ActivityLog.create({
-            action: 'input_created', // Usando um genérico ou adicionando um novo
+            action: 'automation_created',
             description: `Automação "${automation.name}" criada por ${req.user.name}`,
             userId: req.user.id
         });
@@ -42,7 +59,8 @@ exports.createAutomation = async (req, res) => {
 
 exports.updateAutomation = async (req, res) => {
     try {
-        const automation = await Automation.findByIdAndUpdate(req.params.id, req.body, {
+        const payload = normalizeAutomationBody(req.body);
+        const automation = await Automation.findByIdAndUpdate(req.params.id, payload, {
             new: true,
             runValidators: true
         });

@@ -34,11 +34,8 @@ const historyNavItems = [
 
 const hardwareNavItems = [
     { path: '/relays', label: 'Relés', icon: ToggleLeft },
-];
-
-const hardwareDisabledItems = [
-    { label: 'Sensores', icon: Activity },
-    { label: 'Automações', icon: Zap },
+    { path: '/inputs', label: 'Sensores', icon: Activity },
+    { path: '/automations', label: 'Automações', icon: Zap },
 ];
 
 const adminNavItems = [
@@ -155,7 +152,6 @@ export default function Sidebar() {
                 <div className="sidebar-section">
                     <span className="sidebar-section-title">Hardware</span>
                     {hardwareNavItems.map(renderLink)}
-                    {hardwareDisabledItems.map(renderDisabledItem)}
                     <NavLink to="/schedules" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                         <Calendar size={20} /> Agendamentos
                     </NavLink>
