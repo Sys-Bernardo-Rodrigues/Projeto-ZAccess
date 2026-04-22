@@ -55,6 +55,10 @@ const relaySchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        allowResidentInvitation: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

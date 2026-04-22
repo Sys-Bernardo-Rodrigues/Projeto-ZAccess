@@ -4,9 +4,63 @@ const ActivityLog = require('../models/ActivityLog');
 const Schedule = require('../models/Schedule');
 const Invitation = require('../models/Invitation');
 const Automation = require('../models/Automation');
+const jwt = require('jsonwebtoken');
+const config = require('../config/env');
 const { pushDeviceConfig } = require('../services/deviceSyncService');
 const { apiResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
+
+const toggleRelayInternal = async ({ relayId, app, userId, source = 'manual' }) => {
+    const relay = await Relay.findById(relayId)
+        .populate('deviceId', 'name serialNumber status socketId locationId');
+
+    if (!relay) {
+        return { statusCode: 404, message: 'Relé não encontrado.' };
+    }
+
+    const device = relay.deviceId;
+    if (device.status !== 'online') {
+        return { statusCode: 400, message: 'Dispositivo está offline.' };
+    }
+
+    if (!device.socketId) {
+        return { statusCode: 400, message: 'Dispositivo sem conexão WebSocket.' };
+    }
+
+    const newState = relay.state === 'closed' ? 'open' : 'closed';
+    const io = app.get('io');
+
+    io.of('/devices').to(device.socketId).emit('relay:toggle', {
+        relayId: relay._id,
+        channel: relay.channel,
+        gpioPin: relay.gpioPin,
+        targetState: newState,
+        mode: relay.mode,
+        pulseDuration: relay.pulseDuration,
+        timestamp: new Date().toISOString(),
+    });
+
+    relay.state = newState;
+    relay.lastToggled = new Date();
+    await relay.save();
+
+    const action = newState === 'open' ? 'relay_activated' : 'relay_deactivated';
+    await ActivityLog.create({
+        action,
+        description: `Relé "${relay.name}" ${newState === 'open' ? 'ativado' : 'desativado'} via ${source}`,
+        deviceId: device._id,
+        relayId: relay._id,
+        userId: userId || null,
+    });
+
+    logger.info(`Relay toggled (${source}): ${relay.name} -> ${newState}`);
+
+    return {
+        statusCode: 200,
+        message: `Relé ${newState === 'open' ? 'ativado' : 'desativado'} com sucesso.`,
+        data: { relay, newState },
+    };
+};
 
 // GET /api/relays?deviceId=xxx
 exports.getRelays = async (req, res, next) => {
@@ -122,53 +176,120 @@ exports.updateRelay = async (req, res, next) => {
 // POST /api/relays/:id/toggle
 exports.toggleRelay = async (req, res, next) => {
     try {
+        const result = await toggleRelayInternal({
+            relayId: req.params.id,
+            app: req.app,
+            userId: req.user?._id,
+            source: 'painel',
+        });
+        apiResponse(res, result.statusCode, result.data || null, result.message);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// GET /api/relays/:id/access-qr
+exports.generateRelayAccessQr = async (req, res, next) => {
+    try {
         const relay = await Relay.findById(req.params.id)
-            .populate('deviceId', 'name serialNumber status socketId');
+            .populate('deviceId', 'name locationId');
 
         if (!relay) {
             return apiResponse(res, 404, null, 'Relé não encontrado.');
         }
 
-        const device = relay.deviceId;
-        if (device.status !== 'online') {
-            return apiResponse(res, 400, null, 'Dispositivo está offline.');
+        const relayLocationId = relay.deviceId?.locationId?.toString();
+        if (req.allowedLocationId && relayLocationId !== req.allowedLocationId.toString()) {
+            return apiResponse(res, 403, null, 'Acesso a este relé não permitido.');
         }
 
-        if (!device.socketId) {
-            return apiResponse(res, 400, null, 'Dispositivo sem conexão WebSocket.');
-        }
+        const token = jwt.sign(
+            {
+                type: 'relay_qr',
+                relayId: relay._id.toString(),
+            },
+            config.jwt.secret,
+            { expiresIn: '365d' }
+        );
 
-        const newState = relay.state === 'closed' ? 'open' : 'closed';
-        const io = req.app.get('io');
+        const publicPath = `/relay-qr/${token}`;
 
-        // Enviar comando para o dispositivo via WebSocket (namespace /devices)
-        io.of('/devices').to(device.socketId).emit('relay:toggle', {
-            relayId: relay._id,
-            channel: relay.channel,
-            gpioPin: relay.gpioPin,
-            targetState: newState,
-            mode: relay.mode,
-            pulseDuration: relay.pulseDuration,
-            timestamp: new Date().toISOString(),
-        });
-
-        // Atualizar o estado no banco
-        relay.state = newState;
-        relay.lastToggled = new Date();
-        await relay.save();
-
-        const action = newState === 'open' ? 'relay_activated' : 'relay_deactivated';
-        await ActivityLog.create({
-            action,
-            description: `Relé "${relay.name}" ${newState === 'open' ? 'ativado' : 'desativado'}`,
-            deviceId: device._id,
-            relayId: relay._id,
-            userId: req.user._id,
-        });
-
-        logger.info(`Relay toggled: ${relay.name} -> ${newState}`);
-        apiResponse(res, 200, { relay, newState }, `Relé ${newState === 'open' ? 'ativado' : 'desativado'} com sucesso.`);
+        apiResponse(res, 200, {
+            token,
+            publicPath,
+            relay: {
+                id: relay._id,
+                name: relay.name,
+                deviceName: relay.deviceId?.name || '',
+            },
+        }, 'QR de abertura direta gerado com sucesso.');
     } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/relays/access/qr-trigger
+exports.triggerRelayByQr = async (req, res, next) => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return apiResponse(res, 400, null, 'Token QR é obrigatório.');
+        }
+
+        const decoded = jwt.verify(token, config.jwt.secret);
+        if (decoded.type !== 'relay_qr' || !decoded.relayId) {
+            return apiResponse(res, 400, null, 'Token QR inválido.');
+        }
+
+        const relay = await Relay.findById(decoded.relayId).populate('deviceId', 'locationId');
+        if (!relay) {
+            return apiResponse(res, 404, null, 'Relé não encontrado.');
+        }
+
+        const relayLocationId = relay.deviceId?.locationId?.toString();
+        if (req.allowedLocationId && relayLocationId !== req.allowedLocationId.toString()) {
+            return apiResponse(res, 403, null, 'Sem permissão para acionar este relé.');
+        }
+
+        const result = await toggleRelayInternal({
+            relayId: decoded.relayId,
+            app: req.app,
+            userId: req.user?._id,
+            source: 'qr_code',
+        });
+        apiResponse(res, result.statusCode, result.data || null, result.message);
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return apiResponse(res, 400, null, 'QR Code inválido ou expirado.');
+        }
+        next(error);
+    }
+};
+
+// POST /api/relays/public/qr-trigger
+exports.triggerRelayByQrPublic = async (req, res, next) => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return apiResponse(res, 400, null, 'Token QR é obrigatório.');
+        }
+
+        const decoded = jwt.verify(token, config.jwt.secret);
+        if (decoded.type !== 'relay_qr' || !decoded.relayId) {
+            return apiResponse(res, 400, null, 'Token QR inválido.');
+        }
+
+        const result = await toggleRelayInternal({
+            relayId: decoded.relayId,
+            app: req.app,
+            source: 'qr_public',
+        });
+
+        apiResponse(res, result.statusCode, result.data || null, result.message);
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return apiResponse(res, 400, null, 'QR Code inválido ou expirado.');
+        }
         next(error);
     }
 };

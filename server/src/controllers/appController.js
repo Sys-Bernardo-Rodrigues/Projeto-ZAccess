@@ -6,6 +6,7 @@ const Invitation = require('../models/Invitation');
 const ActivityLog = require('../models/ActivityLog');
 const Location = require('../models/Location');
 const LocationUser = require('../models/LocationUser');
+const AppNotification = require('../models/AppNotification');
 const { apiResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
@@ -82,6 +83,7 @@ exports.getInvitations = async (req, res, next) => {
         const invitations = await Invitation.find({
             locationId: req.locationId,
             active: true,
+            createdByLocationUser: req.locationUser._id,
         })
             .populate({
                 path: 'relayIds',
@@ -112,9 +114,27 @@ exports.createInvitation = async (req, res, next) => {
         }
 
         const { relayIds: allowedRelayIds } = await getLocationDeviceAndRelayIds(req.locationId);
-        const validRelayIds = relayIds.filter((id) => allowedRelayIds.some((r) => r.toString() === id.toString()));
+        let validRelayIds = relayIds.filter((id) => allowedRelayIds.some((r) => r.toString() === id.toString()));
+
+        if (req.locationUserRole === 'morador' && validRelayIds.length > 0) {
+            const residentAllowedRelays = await Relay.find({
+                _id: { $in: validRelayIds },
+                allowResidentInvitation: true,
+            }).select('_id');
+
+            const residentAllowedIds = new Set(residentAllowedRelays.map((r) => r._id.toString()));
+            validRelayIds = validRelayIds.filter((id) => residentAllowedIds.has(id.toString()));
+        }
+
         if (validRelayIds.length === 0) {
-            return apiResponse(res, 400, null, 'Nenhuma porta válida do seu local foi selecionada.');
+            return apiResponse(
+                res,
+                400,
+                null,
+                req.locationUserRole === 'morador'
+                    ? 'Nenhuma porta permitida para convite de morador foi selecionada.'
+                    : 'Nenhuma porta válida do seu local foi selecionada.'
+            );
         }
 
         const invitation = await Invitation.create({
@@ -246,6 +266,115 @@ exports.toggleRelay = async (req, res, next) => {
 
         logger.info(`App relay toggled: ${relay.name} -> ${newState} by ${userName}`);
         apiResponse(res, 200, { relay, newState }, newState === 'open' ? 'Porta aberta.' : 'Porta fechada.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+// GET /api/app/location-users - lista usuários do local (síndico)
+exports.getLocationUsers = async (req, res, next) => {
+    try {
+        const users = await LocationUser.find({
+            locationId: req.locationId,
+            active: true,
+        })
+            .select('-password')
+            .sort({ role: 1, name: 1 });
+
+        apiResponse(res, 200, { users, count: users.length });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/app/location-users - cadastra usuário no local (síndico)
+exports.createLocationUser = async (req, res, next) => {
+    try {
+        const { name, email, password, role, phone, unit } = req.body;
+
+        if (!name || !email || !password) {
+            return apiResponse(res, 400, null, 'Nome, e-mail e senha são obrigatórios.');
+        }
+
+        if (!['morador', 'sindico'].includes(role || 'morador')) {
+            return apiResponse(res, 400, null, 'Papel inválido. Use morador ou sindico.');
+        }
+
+        const existing = await LocationUser.findOne({
+            locationId: req.locationId,
+            email: email.toLowerCase().trim(),
+        });
+
+        if (existing) {
+            return apiResponse(res, 409, null, 'Já existe usuário com este e-mail no local.');
+        }
+
+        const created = await LocationUser.create({
+            locationId: req.locationId,
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            password,
+            role: role || 'morador',
+            phone: phone || undefined,
+            unit: unit || undefined,
+            createdByLocationUser: req.locationUser._id,
+        });
+
+        const user = await LocationUser.findById(created._id).select('-password');
+        apiResponse(res, 201, { user }, 'Usuário cadastrado com sucesso.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+// GET /api/app/notifications - notificações do local para o perfil atual
+exports.getNotifications = async (req, res, next) => {
+    try {
+        const roleAudience = req.locationUserRole === 'sindico' ? 'sindico' : 'morador';
+        const notifications = await AppNotification.find({
+            locationId: req.locationId,
+            active: true,
+            audience: { $in: ['all', roleAudience] },
+        })
+            .populate('createdByLocationUser', 'name role')
+            .sort({ createdAt: -1 })
+            .limit(100);
+
+        apiResponse(res, 200, {
+            notifications,
+            count: notifications.length,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/app/notifications - síndico envia notificação para moradores
+exports.createNotification = async (req, res, next) => {
+    try {
+        const { title, message, audience } = req.body;
+        if (!title || !message) {
+            return apiResponse(res, 400, null, 'Título e mensagem são obrigatórios.');
+        }
+
+        const targetAudience = audience || 'morador';
+        if (!['morador', 'all', 'sindico'].includes(targetAudience)) {
+            return apiResponse(res, 400, null, 'Audiência inválida.');
+        }
+
+        const notification = await AppNotification.create({
+            locationId: req.locationId,
+            title: String(title).trim(),
+            message: String(message).trim(),
+            audience: targetAudience,
+            createdByLocationUser: req.locationUser._id,
+        });
+
+        const populated = await AppNotification.findById(notification._id)
+            .populate('createdByLocationUser', 'name role');
+
+        logger.info(`App notification created by ${req.locationUser.email} for ${targetAudience}`);
+        apiResponse(res, 201, { notification: populated }, 'Notificação enviada com sucesso.');
     } catch (error) {
         next(error);
     }

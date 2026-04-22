@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { Shield, Lock, Unlock, Clock, MapPin, ChevronRight, Zap } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { Shield, Lock, Unlock, Clock, MapPin, ChevronRight, Zap, Camera, QrCode, X } from 'lucide-react';
 
 export default function InviteAccessPage() {
     const { token } = useParams();
@@ -19,6 +20,11 @@ export default function InviteAccessPage() {
     const containerRef = useRef(null);
 
     const [selectedGate, setSelectedGate] = useState(null);
+    const [showScannerModal, setShowScannerModal] = useState(false);
+    const [scannerError, setScannerError] = useState('');
+    const [scannerLoading, setScannerLoading] = useState(false);
+    const scannerRef = useRef(null);
+    const isProcessingScanRef = useRef(false);
 
     useEffect(() => {
         const fetchInviteInfo = async () => {
@@ -70,6 +76,169 @@ export default function InviteAccessPage() {
             setUnlocking(false);
         }
     };
+
+    const extractInviteTokenFromQr = (value) => {
+        if (!value) return '';
+        const raw = String(value).trim();
+
+        if (raw.startsWith('/invite/')) {
+            return raw.split('/invite/')[1]?.split(/[?#]/)[0] || '';
+        }
+
+        try {
+            const parsed = new URL(raw);
+            const invitePathMatch = parsed.pathname.match(/^\/invite\/([^/]+)/);
+            return invitePathMatch?.[1] || '';
+        } catch {
+            const directMatch = raw.match(/invite\/([^/?#]+)/);
+            return directMatch?.[1] || '';
+        }
+    };
+
+    const extractRelayQrToken = (value) => {
+        if (!value) return '';
+        const raw = String(value).trim();
+
+        if (raw.startsWith('/relay-qr/')) {
+            return raw.split('/relay-qr/')[1]?.split(/[?#]/)[0] || '';
+        }
+
+        try {
+            const parsed = new URL(raw);
+            const relayPathMatch = parsed.pathname.match(/^\/relay-qr\/([^/]+)/);
+            return relayPathMatch?.[1] || '';
+        } catch {
+            const directMatch = raw.match(/relay-qr\/([^/?#]+)/);
+            return directMatch?.[1] || '';
+        }
+    };
+
+    const handleUnlockByScannedQr = async (decodedText) => {
+        const relayQrToken = extractRelayQrToken(decodedText);
+        if (relayQrToken && !isProcessingScanRef.current) {
+            isProcessingScanRef.current = true;
+            setUnlocking(true);
+            try {
+                await api.post('/relays/public/qr-trigger', { token: relayQrToken });
+                setUnlocked(true);
+                toast.success('Acesso liberado via QR direto!', { icon: '🔓' });
+                setTimeout(() => {
+                    setUnlocked(false);
+                    setSliderPos(0);
+                    setUnlocking(false);
+                }, 5000);
+            } catch (err) {
+                toast.error(err.response?.data?.message || 'Falha ao liberar acesso via QR.');
+                setUnlocking(false);
+            } finally {
+                isProcessingScanRef.current = false;
+            }
+            return;
+        }
+
+        const scannedToken = extractInviteTokenFromQr(decodedText);
+        if (!scannedToken || isProcessingScanRef.current) return;
+
+        isProcessingScanRef.current = true;
+        setUnlocking(true);
+        try {
+            const infoRes = await api.get(`/invitations/access/${scannedToken}`);
+            const firstGate = infoRes.data?.data?.gates?.[0];
+
+            if (!firstGate?.id) {
+                throw new Error('Nenhuma porta encontrada nesse QR.');
+            }
+
+            await api.post(`/invitations/access/${scannedToken}/unlock`, { relayId: firstGate.id });
+            setUnlocked(true);
+            toast.success('Acesso liberado via QR!', { icon: '🔓' });
+
+            setTimeout(() => {
+                setUnlocked(false);
+                setSliderPos(0);
+                setUnlocking(false);
+            }, 5000);
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.message || 'Falha ao liberar acesso via QR.');
+            setUnlocking(false);
+        } finally {
+            isProcessingScanRef.current = false;
+        }
+    };
+
+    useEffect(() => {
+        if (!showScannerModal) return undefined;
+
+        let mounted = true;
+        const scanner = new Html5Qrcode('invite-qr-reader');
+        scannerRef.current = scanner;
+        setScannerError('');
+        setScannerLoading(true);
+
+        const startScanner = async () => {
+            try {
+                const canUseMedia = typeof navigator !== 'undefined'
+                    && navigator.mediaDevices
+                    && typeof navigator.mediaDevices.getUserMedia === 'function';
+
+                if (!canUseMedia) {
+                    setScannerError('Seu navegador não suporta acesso à câmera neste contexto.');
+                    return;
+                }
+
+                const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+                if (!window.isSecureContext && !isLocalhost) {
+                    setScannerError('Para usar a câmera em celular, abra o painel com HTTPS ou em localhost.');
+                    return;
+                }
+
+                // Força o navegador a pedir permissão antes de iniciar o scanner.
+                const permissionStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                });
+                permissionStream.getTracks().forEach((track) => track.stop());
+
+                const cameras = await Html5Qrcode.getCameras();
+                if (!mounted) return;
+
+                if (!cameras || cameras.length === 0) {
+                    setScannerError('Nenhuma câmera encontrada no dispositivo.');
+                    return;
+                }
+
+                await scanner.start(
+                    cameras[0].id,
+                    { fps: 10, qrbox: { width: 240, height: 240 } },
+                    (decodedText) => {
+                        if (isProcessingScanRef.current) return;
+                        setShowScannerModal(false);
+                        handleUnlockByScannedQr(decodedText);
+                    },
+                    () => {}
+                );
+            } catch (error) {
+                if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+                    setScannerError('Permissão de câmera negada. Permita o acesso no navegador e tente novamente.');
+                } else {
+                    setScannerError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+                }
+            } finally {
+                if (mounted) setScannerLoading(false);
+            }
+        };
+
+        startScanner();
+
+        return () => {
+            mounted = false;
+            if (scannerRef.current && scannerRef.current.isScanning) {
+                scannerRef.current.stop().catch(() => {});
+            }
+            scannerRef.current?.clear().catch(() => {});
+            scannerRef.current = null;
+            setScannerLoading(false);
+        };
+    }, [showScannerModal]);
 
     // Slider Logic (unchanged from here)
     const onStart = (e) => {
@@ -238,6 +407,16 @@ export default function InviteAccessPage() {
                 </div>
 
                 <div className="unlock-zone">
+                    <button
+                        className="scan-qr-btn"
+                        type="button"
+                        onClick={() => setShowScannerModal(true)}
+                        disabled={unlocking}
+                    >
+                        <Camera size={16} />
+                        Ler QR Code para liberar
+                    </button>
+
                     <div
                         className={`slider-container ${unlocked ? 'is-unlocked' : ''} ${unlocking ? 'is-unlocking' : ''}`}
                         ref={containerRef}
@@ -265,6 +444,37 @@ export default function InviteAccessPage() {
                     Uso ilimitado das portas selecionadas até a expiração.
                 </div>
             </div>
+
+            {showScannerModal && (
+                <div className="qr-modal-overlay" onClick={() => setShowScannerModal(false)}>
+                    <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="qr-modal-header">
+                            <h3>Ler QR Code</h3>
+                            <button type="button" className="qr-close-btn" onClick={() => setShowScannerModal(false)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <p className="qr-modal-text">Aponte a câmera para o QR do convite para liberar o relé.</p>
+                        <div id="invite-qr-reader" className="qr-reader-box" />
+                        {scannerLoading ? <p className="qr-modal-text">Inicializando câmera...</p> : null}
+                        {scannerError ? <p className="qr-modal-error">{scannerError}</p> : null}
+                        <button
+                            type="button"
+                            className="scan-qr-btn"
+                            style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
+                            onClick={() => {
+                                const value = prompt('Cole aqui o link /invite/:token lido do QR:');
+                                if (!value) return;
+                                setShowScannerModal(false);
+                                handleUnlockByScannedQr(value);
+                            }}
+                        >
+                            <QrCode size={16} />
+                            Colar link do QR
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 .invite-access-container {
@@ -371,6 +581,24 @@ export default function InviteAccessPage() {
                 .device-name { font-size: 0.7rem; color: #94a3b8; }
 
                 .unlock-zone { margin-bottom: 24px; }
+                .scan-qr-btn {
+                    width: 100%;
+                    margin-bottom: 12px;
+                    height: 46px;
+                    border-radius: 12px;
+                    border: 1px solid rgba(168, 85, 247, 0.35);
+                    background: rgba(168, 85, 247, 0.12);
+                    color: #e9d5ff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .scan-qr-btn:hover { background: rgba(168, 85, 247, 0.2); }
+                .scan-qr-btn:disabled { opacity: 0.6; cursor: not-allowed; }
                 .slider-container {
                     height: 80px;
                     background: #111827;
@@ -416,6 +644,61 @@ export default function InviteAccessPage() {
 
                 .footer-note { font-size: 0.75rem; color: #64748b; font-weight: 500; }
                 .error-card { text-align: center; max-width: 400px; }
+
+                .qr-modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(10, 14, 26, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    padding: 16px;
+                }
+                .qr-modal {
+                    width: 100%;
+                    max-width: 460px;
+                    background: #111827;
+                    border: 1px solid rgba(168, 85, 247, 0.3);
+                    border-radius: 16px;
+                    padding: 16px;
+                }
+                .qr-modal-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 8px;
+                }
+                .qr-close-btn {
+                    border: none;
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 8px;
+                    background: rgba(255, 255, 255, 0.08);
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                }
+                .qr-reader-box {
+                    width: 100%;
+                    min-height: 300px;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    background: #0b1020;
+                }
+                .qr-modal-text {
+                    font-size: 0.85rem;
+                    color: #94a3b8;
+                    margin-bottom: 10px;
+                }
+                .qr-modal-error {
+                    margin-top: 10px;
+                    font-size: 0.8rem;
+                    color: #f87171;
+                }
             `}</style>
         </div>
     );

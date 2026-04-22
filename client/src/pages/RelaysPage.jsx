@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import QRCode from 'qrcode';
 import {
     Plus,
     ToggleLeft,
@@ -14,6 +15,8 @@ import {
     X,
     Send,
     Power,
+    QrCode,
+    Copy,
 } from 'lucide-react';
 
 const typeIcons = {
@@ -42,6 +45,11 @@ export default function RelaysPage() {
     const [toggling, setToggling] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [editingRelay, setEditingRelay] = useState(null);
+    const [showQrModal, setShowQrModal] = useState(false);
+    const [qrImage, setQrImage] = useState('');
+    const [qrLink, setQrLink] = useState('');
+    const [qrRelayName, setQrRelayName] = useState('');
+    const [qrLoadingId, setQrLoadingId] = useState(null);
     const [form, setForm] = useState({
         name: '',
         type: 'automation',
@@ -51,6 +59,7 @@ export default function RelaysPage() {
         pulseDuration: 1000,
         locationId: '',
         deviceId: '',
+        allowResidentInvitation: false,
     });
 
     const devicesForLocation = form.locationId
@@ -88,7 +97,7 @@ export default function RelaysPage() {
     }, [loadRelays]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
 
         if (name === 'locationId') {
             setForm((prev) => ({
@@ -99,7 +108,7 @@ export default function RelaysPage() {
             return;
         }
 
-        setForm((prev) => ({ ...prev, [name]: value }));
+        setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const handleToggle = async (relay) => {
@@ -136,6 +145,7 @@ export default function RelaysPage() {
             pulseDuration: 1000,
             locationId: '',
             deviceId: '',
+            allowResidentInvitation: false,
         });
         setShowModal(true);
     };
@@ -172,6 +182,42 @@ export default function RelaysPage() {
             loadRelays();
         } catch (err) {
             toast.error('Erro ao remover relé');
+        }
+    };
+
+    const handleGenerateQr = async (relay) => {
+        setQrLoadingId(relay._id);
+        try {
+            const res = await api.get(`/relays/${relay._id}/access-qr`);
+            const publicPath = res.data?.data?.publicPath;
+            if (!publicPath) {
+                toast.error('Não foi possível gerar o QR Code.');
+                return;
+            }
+
+            const relayQrLink = `${window.location.origin}${publicPath}`;
+            const image = await QRCode.toDataURL(relayQrLink, {
+                width: 320,
+                margin: 2,
+            });
+
+            setQrLink(relayQrLink);
+            setQrImage(image);
+            setQrRelayName(relay.name);
+            setShowQrModal(true);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Erro ao gerar QR Code');
+        } finally {
+            setQrLoadingId(null);
+        }
+    };
+
+    const copyQrLink = async () => {
+        try {
+            await navigator.clipboard.writeText(qrLink);
+            toast.success('Link do QR copiado!');
+        } catch (error) {
+            toast.error('Não foi possível copiar o link.');
         }
     };
 
@@ -319,11 +365,23 @@ export default function RelaysPage() {
                                                             pulseDuration: relay.pulseDuration,
                                                             locationId: locationId || '',
                                                             deviceId: deviceId || '',
+                                                            allowResidentInvitation: Boolean(relay.allowResidentInvitation),
                                                         });
                                                         setShowModal(true);
                                                     }}
                                                 >
                                                     <Edit size={14} />
+                                                </button>
+                                                <button
+                                                    className="btn btn-icon btn-secondary btn-sm"
+                                                    onClick={() => handleGenerateQr(relay)}
+                                                    title="Gerar QR de acesso"
+                                                >
+                                                    {qrLoadingId === relay._id ? (
+                                                        <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                                                    ) : (
+                                                        <QrCode size={14} />
+                                                    )}
                                                 </button>
                                                 <button
                                                     className="btn btn-icon btn-danger btn-sm"
@@ -447,6 +505,24 @@ export default function RelaysPage() {
                                     />
                                 </div>
 
+                                <div className="form-group">
+                                    <label
+                                        className="form-label"
+                                        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            name="allowResidentInvitation"
+                                            checked={form.allowResidentInvitation}
+                                            onChange={handleChange}
+                                        />
+                                        Permitir morador fazer convite
+                                    </label>
+                                    <small className="form-hint">
+                                        Quando ativo, moradores poderão criar convites deste relé no app.
+                                    </small>
+                                </div>
+
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                     <div className="form-group">
                                         <label className="form-label">Local</label>
@@ -498,6 +574,43 @@ export default function RelaysPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {showQrModal && (
+                <div className="modal-overlay" onClick={() => setShowQrModal(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+                        <div className="modal-header">
+                            <h2>QR de acesso - {qrRelayName}</h2>
+                            <button
+                                className="btn btn-icon btn-secondary"
+                                onClick={() => setShowQrModal(false)}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="modal-body" style={{ textAlign: 'center' }}>
+                            {qrImage ? (
+                                <img
+                                    src={qrImage}
+                                    alt={`QR de acesso do relé ${qrRelayName}`}
+                                    style={{ width: 280, maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border-color)' }}
+                                />
+                            ) : null}
+                            <p style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                Este QR abre um link público em <strong>/relay-qr/:token</strong> e aciona a porta diretamente.
+                            </p>
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" onClick={() => setShowQrModal(false)}>
+                                Fechar
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={copyQrLink}>
+                                <Copy size={16} />
+                                Copiar Link
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

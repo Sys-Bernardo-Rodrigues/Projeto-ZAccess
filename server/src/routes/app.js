@@ -15,5 +15,9 @@ router.get('/invitations', appController.getInvitations);
 router.post('/invitations', appController.createInvitation);
 router.delete('/invitations/:id', appController.deleteInvitation);
 router.get('/logs', requireSindico, appController.getLogs);
+router.get('/location-users', requireSindico, appController.getLocationUsers);
+router.post('/location-users', requireSindico, appController.createLocationUser);
+router.get('/notifications', appController.getNotifications);
+router.post('/notifications', requireSindico, appController.createNotification);
 
 module.exports = router;

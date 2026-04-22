@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { Plus, Link, Trash2, X, Send, Calendar, User, Key, ExternalLink, Copy, Clock } from 'lucide-react';
+import { Plus, Link, Trash2, X, Send, User, Key, ExternalLink } from 'lucide-react';
 
 export default function InvitationsPage() {
     const [invitations, setInvitations] = useState([]);
@@ -296,6 +296,7 @@ export default function InvitationsPage() {
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

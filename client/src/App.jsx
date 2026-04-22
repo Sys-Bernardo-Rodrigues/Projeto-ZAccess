@@ -21,6 +21,7 @@ import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import InvitationsPage from './pages/InvitationsPage';
 import InviteAccessPage from './pages/InviteAccessPage';
+import RelayQrAccessPage from './pages/RelayQrAccessPage';
 import AlertListener from './components/Alerts/AlertListener';
 
 function ProtectedRoute({ children }) {
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="/invite/:token" element={<InviteAccessPage />} />
+      <Route path="/relay-qr/:token" element={<RelayQrAccessPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
