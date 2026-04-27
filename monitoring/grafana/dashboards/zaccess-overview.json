@@ -1,0 +1,106 @@
+{
+  "id": null,
+  "uid": "zaccess-overview",
+  "title": "ZAccess - Overview Executivo",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "API Disponivel",
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "up{job=\"zaccess_server\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Prometheus Disponivel",
+      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "up{job=\"prometheus\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Mongo Exporter Up",
+      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "up{job=\"mongodb_exporter\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Redis Exporter Up",
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "up{job=\"redis_exporter\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Node Exporter Up",
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "up{job=\"node_exporter\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "cAdvisor Up",
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "up{job=\"cadvisor\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS + Erro 5xx",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"zaccess_server\"}[1m]))", "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m]))", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia p95 e p99 (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))", "refId": "A" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Eventos de Negocio por Tipo",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(rate(zaccess_business_events_total{job=\"zaccess_server\"}[5m])) by (event_type)", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Uso de Recursos do Host",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A" },
+        { "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "B" }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] }
+}

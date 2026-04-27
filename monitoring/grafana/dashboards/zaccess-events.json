@@ -1,0 +1,200 @@
+{
+  "id": null,
+  "uid": "zaccess-events",
+  "title": "ZAccess - Eventos e Logs",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Eventos (24h)",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Erros (24h)",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "level: error OR level: warn",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Rotas Ativas (24h)",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "cardinality",
+              "field": "route.keyword"
+            }
+          ],
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "route:*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Servicos Ativos (24h)",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "cardinality",
+              "field": "service.name.keyword"
+            }
+          ],
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "service.name:*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Logs da API",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 5 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "query": "*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Erros por nivel",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "terms",
+              "field": "level.keyword",
+              "settings": { "size": 10, "order": "desc", "orderBy": "_count" }
+            }
+          ],
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "level:*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Eventos por rota",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "terms",
+              "field": "route.keyword",
+              "settings": { "size": 20, "order": "desc", "orderBy": "_count" }
+            }
+          ],
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "route:*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top mensagens de erro",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "terms",
+              "field": "message.keyword",
+              "settings": { "size": 10, "order": "desc", "orderBy": "_count" }
+            }
+          ],
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "level:error OR level:warn",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Eventos por servico",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "terms",
+              "field": "service.name.keyword",
+              "settings": { "size": 10, "order": "desc", "orderBy": "_count" }
+            }
+          ],
+          "metrics": [
+            { "id": "1", "type": "count" }
+          ],
+          "query": "service.name:*",
+          "refId": "A",
+          "timeField": "@timestamp"
+        }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] }
+}

@@ -43,10 +43,275 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================
+  # Prometheus - Coleta de métricas
+  # ============================================
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: zaccess-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-8GB}
+      - --web.enable-lifecycle
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    networks:
+      - zaccess-network
+    depends_on:
+      - alertmanager
+      - node-exporter
+      - cadvisor
+      - redis-exporter
+      - mongodb-exporter
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Alertmanager - Roteamento de alertas
+  # ============================================
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: zaccess-alertmanager
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        cat <<EOF >/tmp/alertmanager.yml
+        global:
+          resolve_timeout: 5m
+        route:
+          receiver: webhook-warning
+          group_by: [alertname, service, severity]
+          group_wait: $${ALERT_GROUP_WAIT}
+          group_interval: $${ALERT_GROUP_INTERVAL}
+          repeat_interval: $${ALERT_REPEAT_INTERVAL}
+          routes:
+            - matchers:
+                - severity="critical"
+              receiver: webhook-critical
+              group_wait: 5s
+              repeat_interval: 30m
+            - matchers:
+                - severity="warning"
+              receiver: webhook-warning
+              group_wait: 20s
+              repeat_interval: 2h
+        inhibit_rules:
+          - source_matchers:
+              - alertname="ZaccessApiDown"
+            target_matchers:
+              - service="zaccess-server"
+            equal: [service]
+          - source_matchers:
+              - severity="critical"
+            target_matchers:
+              - severity="warning"
+            equal: [service]
+        receivers:
+          - name: webhook-critical
+            webhook_configs:
+              - url: "$${ALERT_WEBHOOK_URL}"
+                send_resolved: $${ALERT_WEBHOOK_SEND_RESOLVED}
+          - name: webhook-warning
+            webhook_configs:
+              - url: "$${ALERT_WEBHOOK_URL}"
+                send_resolved: $${ALERT_WEBHOOK_SEND_RESOLVED}
+        EOF
+        /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:9093:9093"
+    environment:
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-http://host.docker.internal:9999/alerts}
+      ALERT_WEBHOOK_TIMEOUT: ${ALERT_WEBHOOK_TIMEOUT:-5s}
+      ALERT_WEBHOOK_SEND_RESOLVED: ${ALERT_WEBHOOK_SEND_RESOLVED:-true}
+      ALERT_GROUP_WAIT: ${ALERT_GROUP_WAIT:-15s}
+      ALERT_GROUP_INTERVAL: ${ALERT_GROUP_INTERVAL:-1m}
+      ALERT_REPEAT_INTERVAL: ${ALERT_REPEAT_INTERVAL:-2h}
+    volumes:
+      - alertmanager-data:/alertmanager
+    networks:
+      - zaccess-network
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:9093/-/healthy" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Grafana - Dashboards e visualização
+  # ============================================
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: zaccess-grafana
+    restart: unless-stopped
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "false"
+      GF_SECURITY_COOKIE_SAMESITE: strict
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - zaccess-network
+    depends_on:
+      - prometheus
+      - elasticsearch
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Elasticsearch - Logs e eventos
+  # ============================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
+    container_name: zaccess-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - zaccess-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null || exit 1" ]
+      interval: 20s
+      timeout: 8s
+      retries: 8
+
+  elasticsearch-init:
+    image: curlimages/curl:8.8.0
+    container_name: zaccess-elasticsearch-init
+    restart: "no"
+    entrypoint: [ "/bin/sh", "/scripts/init-ilm.sh" ]
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-15}
+    volumes:
+      - ./monitoring/elasticsearch/init-ilm.sh:/scripts/init-ilm.sh:ro
+    networks:
+      - zaccess-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # ============================================
+  # Filebeat - Coleta de logs do backend
+  # ============================================
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.2
+    container_name: zaccess-filebeat
+    restart: unless-stopped
+    user: root
+    command: [ "filebeat", "-e", "--strict.perms=false" ]
+    volumes:
+      - ./monitoring/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./server/logs:/var/log/zaccess:ro
+    networks:
+      - zaccess-network
+    depends_on:
+      - elasticsearch
+      - elasticsearch-init
+    healthcheck:
+      test: [ "CMD", "filebeat", "test", "output", "-e" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============================================
+  # Exporters - Métricas de infraestrutura
+  # ============================================
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: zaccess-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:9100:9100"
+    networks:
+      - zaccess-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: zaccess-cadvisor
+    restart: unless-stopped
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - zaccess-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.61.0
+    container_name: zaccess-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:9121:9121"
+    networks:
+      - zaccess-network
+    depends_on:
+      - redis
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: zaccess-mongodb-exporter
+    restart: unless-stopped
+    command:
+      - --mongodb.uri=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/admin
+      - --collect-all
+    ports:
+      - "${OBSERVABILITY_BIND_ADDR:-127.0.0.1}:9216:9216"
+    networks:
+      - zaccess-network
+    depends_on:
+      - mongodb
+
 volumes:
   mongo-data:
     driver: local
   redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+  elasticsearch-data:
     driver: local
 
 networks:

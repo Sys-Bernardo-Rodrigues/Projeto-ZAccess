@@ -1,0 +1,28 @@
+filebeat.inputs:
+  - type: filestream
+    id: zaccess-server-logs
+    enabled: true
+    paths:
+      - /var/log/zaccess/*.log
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
+
+processors:
+  - add_fields:
+      target: service
+      fields:
+        name: zaccess-server
+  - add_host_metadata: ~
+  - add_docker_metadata: ~
+
+output.elasticsearch:
+  hosts: [ "http://elasticsearch:9200" ]
+  index: "zaccess-logs-%{+yyyy.MM.dd}"
+
+setup.template.name: "zaccess-logs"
+setup.template.pattern: "zaccess-logs-*"
+setup.ilm.enabled: true
+setup.ilm.policy_name: "zaccess-logs-policy"

@@ -1,0 +1,138 @@
+groups:
+  - name: zaccess-availability
+    rules:
+      - alert: ZaccessApiDown
+        expr: up{job="zaccess_server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: zaccess-server
+        annotations:
+          summary: "API ZAccess indisponivel"
+          description: "A API ZAccess nao respondeu por mais de 1 minuto."
+
+      - alert: MongoExporterDown
+        expr: up{job="mongodb_exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: mongodb
+        annotations:
+          summary: "MongoDB exporter indisponivel"
+          description: "Prometheus nao esta coletando metricas do MongoDB exporter."
+
+      - alert: RedisExporterDown
+        expr: up{job="redis_exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis exporter indisponivel"
+          description: "Prometheus nao esta coletando metricas do Redis exporter."
+
+  - name: zaccess-performance
+    rules:
+      - alert: ZaccessHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="zaccess_server",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="zaccess_server"}[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: zaccess-server
+        annotations:
+          summary: "Taxa de erro 5xx elevada"
+          description: "Mais de 5% das requisicoes retornam 5xx nos ultimos 5 minutos."
+
+      - alert: ZaccessHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="zaccess_server"}[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: zaccess-server
+        annotations:
+          summary: "Latencia p95 alta"
+          description: "A latencia p95 da API excedeu 1s nos ultimos 5 minutos."
+
+  - name: zaccess-capacity
+    rules:
+      - alert: HostHighCpuUsage
+        expr: |
+          (
+            100 -
+            (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+          ) > 85
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "Uso de CPU alto no host"
+          description: "CPU acima de 85% por mais de 10 minutos."
+
+      - alert: HostHighMemoryUsage
+        expr: |
+          (
+            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+          ) > 90
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "Uso de memoria alto no host"
+          description: "Memoria acima de 90% por mais de 10 minutos."
+
+      - alert: HostDiskUsageHigh
+        expr: |
+          (
+            (node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"})
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+          ) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "Uso de disco alto no host"
+          description: "Disco acima de 85% por mais de 10 minutos."
+
+  - name: zaccess-slo
+    rules:
+      - alert: ZaccessErrorBudgetBurnRateFast
+        expr: |
+          (
+            sum(rate(http_requests_total{job="zaccess_server",status=~"5.."}[1h]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="zaccess_server"}[1h])), 1e-9)
+          ) / 0.001 > 14.4
+        for: 5m
+        labels:
+          severity: critical
+          service: zaccess-server
+        annotations:
+          summary: "Burn rate rapido de error budget"
+          description: "Erro 5xx em 1h indica consumo acelerado do error budget do SLO."
+
+      - alert: ZaccessErrorBudgetBurnRateSlow
+        expr: |
+          (
+            sum(rate(http_requests_total{job="zaccess_server",status=~"5.."}[6h]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="zaccess_server"}[6h])), 1e-9)
+          ) / 0.001 > 6
+        for: 15m
+        labels:
+          severity: warning
+          service: zaccess-server
+        annotations:
+          summary: "Burn rate lento de error budget"
+          description: "Erro 5xx em 6h esta acima do esperado para o SLO."

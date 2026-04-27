@@ -1,13 +1,16 @@
 const winston = require('winston');
+const path = require('path');
 const config = require('../config/env');
+
+const logFormat = winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+);
 
 const logger = winston.createLogger({
     level: config.nodeEnv === 'development' ? 'debug' : 'info',
-    format: winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.errors({ stack: true }),
-        winston.format.json()
-    ),
+    format: logFormat,
     defaultMeta: { service: 'zacess-server' },
     transports: [
         new winston.transports.Console({
@@ -20,6 +23,10 @@ const logger = winston.createLogger({
                     return `${timestamp} [${level}]: ${message}${metaStr}`;
                 })
             ),
+        }),
+        new winston.transports.File({
+            filename: path.resolve(__dirname, '../../logs/server.log'),
+            format: logFormat,
         }),
     ],
 });

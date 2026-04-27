@@ -12,6 +12,7 @@ const config = require('./config/env');
 const connectDatabase = require('./config/database');
 const { connectRedis } = require('./config/redis');
 const logger = require('./utils/logger');
+const { register, metricsMiddleware } = require('./metrics');
 const errorHandler = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const openapiSpec = require('./docs/openapi');
@@ -84,6 +85,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(config.jwt.secret));
 app.use(morgan('dev'));
+app.use(metricsMiddleware);
 
 // ============================================
 // OpenAPI / Swagger UI – tela de login simples
@@ -225,6 +227,13 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
     });
+});
+
+// Endpoint Prometheus
+app.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', register.contentType);
+    const metrics = await register.metrics();
+    res.send(metrics);
 });
 
 // 404

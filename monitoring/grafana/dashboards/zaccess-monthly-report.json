@@ -1,0 +1,90 @@
+{
+  "id": null,
+  "uid": "zaccess-monthly-report",
+  "title": "ZAccess - Relatorio Mensal",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Disponibilidade API 30d (%)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "avg_over_time(up{job=\"zaccess_server\"}[30d]) * 100", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "SLO Meta (%)",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "99.9", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Error Budget Consumido 30d (%)",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "((1 - avg_over_time(up{job=\"zaccess_server\"}[30d])) / 0.001) * 100", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Apdex Medio 30d",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "avg_over_time((((sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"0.3\"}[5m])) + (sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"1.2\"}[5m])) - sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"0.3\"}[5m]))) / 2) / clamp_min(sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])), 1)))[30d:5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia p95 e p99 (30d)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "zaccess:api:latency_p95_5m", "refId": "A" },
+        { "expr": "zaccess:api:latency_p99_5m", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Burn Rate 1h e 6h (30d)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "zaccess:api:burn_rate_1h", "refId": "A" },
+        { "expr": "zaccess:api:burn_rate_6h", "refId": "B" }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Eventos por tipo (30d)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(increase(zaccess_business_events_total{job=\"zaccess_server\"}[30d])) by (event_type)", "refId": "A", "format": "table" }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top rotas por trafego (30d)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "topk(15, sum(increase(http_requests_total{job=\"zaccess_server\"}[30d])) by (route))", "refId": "A", "format": "table" }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] }
+}

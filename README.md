@@ -122,6 +122,67 @@ O servidor lê o `.env` da **raiz do repositório**.
 | server | `npm run seed` | Popula banco (admin) |
 | client | `npm run dev` | Painel em desenvolvimento |
 
+## Observabilidade (Docker)
+
+A stack de observabilidade foi adicionada no mesmo `docker-compose` com:
+- **Prometheus** (coleta de métricas): `http://localhost:9090`
+- **Alertmanager** (roteamento de alertas): `http://localhost:9093`
+- **Grafana** (dashboards): `http://localhost:3001`
+- **Elasticsearch** (logs/eventos): `http://localhost:9200`
+- Exporters: node, cAdvisor, Redis e MongoDB
+- **Filebeat** para ingestao de logs estruturados em `server/logs/server.log`
+
+### Subir stack completa
+
+```bash
+docker compose up -d
+```
+
+### Instrumentacao da API
+
+- Endpoint de metricas Prometheus: `GET /metrics`
+- Endpoint de health: `GET /api/health`
+- Metricas principais:
+  - `http_requests_total`
+  - `http_request_duration_seconds`
+  - `zaccess_business_events_total`
+
+### Alertas via webhook (.env)
+
+Configure no `.env`:
+
+```bash
+ALERT_WEBHOOK_URL=http://seu-webhook/alerts
+ALERT_WEBHOOK_TIMEOUT=5s
+ALERT_WEBHOOK_SEND_RESOLVED=true
+OBSERVABILITY_BIND_ADDR=127.0.0.1
+ALERT_GROUP_WAIT=15s
+ALERT_GROUP_INTERVAL=1m
+ALERT_REPEAT_INTERVAL=2h
+LOG_RETENTION_DAYS=15
+SLO_AVAILABILITY_TARGET=99.9
+SLO_ERROR_BUDGET=0.1
+APDEX_TARGET=0.94
+APDEX_TOLERATED=0.85
+```
+
+### Dashboards provisionados no Grafana
+
+No folder `ZAccess`:
+- `ZAccess - Infra e Containers`
+- `ZAccess - API`
+- `ZAccess - Eventos e Logs`
+- `ZAccess - Overview Executivo`
+- `ZAccess - NOC (SLA/SLO)`
+- `ZAccess - Relatorio Mensal`
+
+### Teste rapido da observabilidade
+
+1. Suba o backend (`server`) e o compose.
+2. Verifique o target `zaccess_server` em Prometheus (`/targets`).
+3. Gere trafego na API e confira os paineis no Grafana.
+4. Pare o backend por alguns minutos para validar alerta `ZaccessApiDown`.
+
 ## Licença
 
 Uso interno / conforme definido pelo projeto.

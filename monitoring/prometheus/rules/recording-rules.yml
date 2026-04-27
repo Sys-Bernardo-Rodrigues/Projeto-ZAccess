@@ -1,0 +1,42 @@
+groups:
+  - name: zaccess-recording-rules
+    interval: 30s
+    rules:
+      - record: zaccess:api:requests_rate_1m
+        expr: sum(rate(http_requests_total{job="zaccess_server"}[1m]))
+
+      - record: zaccess:api:error_rate_5m
+        expr: |
+          sum(rate(http_requests_total{job="zaccess_server",status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{job="zaccess_server"}[5m])), 1e-9)
+
+      - record: zaccess:api:latency_p95_5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="zaccess_server"}[5m])) by (le)
+          )
+
+      - record: zaccess:api:latency_p99_5m
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="zaccess_server"}[5m])) by (le)
+          )
+
+      - record: zaccess:api:burn_rate_1h
+        expr: |
+          (
+            sum(rate(http_requests_total{job="zaccess_server",status=~"5.."}[1h]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="zaccess_server"}[1h])), 1e-9)
+          ) / 0.001
+
+      - record: zaccess:api:burn_rate_6h
+        expr: |
+          (
+            sum(rate(http_requests_total{job="zaccess_server",status=~"5.."}[6h]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="zaccess_server"}[6h])), 1e-9)
+          ) / 0.001
