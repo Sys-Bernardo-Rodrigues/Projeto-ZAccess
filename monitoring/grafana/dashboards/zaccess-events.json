@@ -6,6 +6,10 @@
   "schemaVersion": 39,
   "version": 1,
   "refresh": "15s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "panels": [
     {
       "type": "stat",
