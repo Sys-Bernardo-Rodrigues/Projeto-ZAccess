@@ -98,6 +98,9 @@ Sistema para gerenciamento de dispositivos IoT: relés, sensores (inputs), locai
 | `VITE_WS_URL` | URL do WebSocket para o client (ex: `http://localhost:3000`) |
 | `DOCS_USERNAME` | Usuário para acessar `/docs` (Swagger) |
 | `DOCS_PASSWORD` | Senha para acessar `/docs` |
+| `CORS_ALLOWED_ORIGINS` | Lista de origens permitidas (CSV) |
+| `TRUST_PROXY` | Config de proxy Express (ex: `loopback`, `1`, `true`) |
+| `FORCE_HTTPS` | Força redirecionamento para HTTPS quando `true` |
 
 O servidor lê o `.env` da **raiz do repositório**.
 
@@ -112,6 +115,62 @@ O servidor lê o `.env` da **raiz do repositório**.
   - Locais, dispositivos, relés, inputs
   - Agendamentos, automações, convites
   - Logs, relatórios e endpoints do app (`/api/app/*`)
+
+## Deploy produção (VPS + Cloudflare)
+
+### Cenário alvo
+- Domínio público: `https://zaccess.zroot.online`
+- HTTPS/porta 443: terminados no Cloudflare
+- API de origem na VPS: `http://127.0.0.1:3000` (ou `http://SEU_HOST:3000`)
+
+### 1) Configurar `.env` de produção
+
+Use estes valores na VPS:
+
+```bash
+NODE_ENV=production
+SERVER_PORT=3000
+SERVER_HOST=0.0.0.0
+
+TRUST_PROXY=loopback
+FORCE_HTTPS=true
+CORS_ALLOWED_ORIGINS=https://zaccess.zroot.online
+
+PUBLIC_BASE_URL=https://zaccess.zroot.online
+VITE_API_URL=https://zaccess.zroot.online
+VITE_WS_URL=https://zaccess.zroot.online
+EXPO_PUBLIC_API_URL=https://zaccess.zroot.online
+
+CLOUDFLARE_TUNNEL_TOKEN=seu_token_do_tunnel
+```
+
+### 2) Configurar Cloudflare
+
+- SSL/TLS em `Full` (ou `Full (strict)` se tiver certificado de origem).
+- Tunnel com hostname `zaccess.zroot.online`.
+- Origem do tunnel apontando para `http://SEU_HOST:3000`.
+- Rotas usadas pela aplicação:
+  - `/api/*`
+  - `/socket.io/*`
+  - `/docs` (opcional)
+
+### 3) Subir na VPS
+
+```bash
+docker compose up -d
+docker compose --profile cloudflare up -d cloudflared
+```
+
+### 4) Verificação pós-deploy
+
+```bash
+curl -I https://zaccess.zroot.online/api/health
+curl https://zaccess.zroot.online/api/health
+```
+
+Resultado esperado:
+- resposta `200` no `/api/health`
+- redirecionamento HTTP -> HTTPS ativo (por `FORCE_HTTPS=true`)
 
 ## Scripts úteis
 

@@ -42,12 +42,35 @@ const setupDeviceSocket = require('./socket/deviceSocket');
 const app = express();
 const server = http.createServer(app);
 
+const isDev = config.nodeEnv !== 'production';
+
+const defaultAllowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+];
+
+const normalizedAllowedOrigins = new Set([
+    ...defaultAllowedOrigins,
+    ...(config.cors.allowedOrigins || []),
+]);
+
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true;
+    const localhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+    return localhost || normalizedAllowedOrigins.has(origin) || isDev;
+};
+
 // ============================================
 // Socket.IO Setup
 // ============================================
 const io = new Server(server, {
     cors: {
-        origin: true, // Permite conexões do painel (localhost) e dos dispositivos (IP do Pi ou qualquer origem)
+        origin: (origin, cb) => {
+            if (isAllowedOrigin(origin)) return cb(null, true);
+            return cb(new Error(`CORS bloqueado para origem: ${origin}`), false);
+        },
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -61,23 +84,21 @@ app.set('io', io);
 // Middleware
 // ============================================
 app.use(helmet());
-// CORS: em desenvolvimento aceita qualquer localhost/127.0.0.1 e o app Flutter (web ou mobile)
-const isDev = config.nodeEnv !== 'production';
+app.set('trust proxy', config.proxy.trustProxy);
+
+// Quando a API esta atras de Cloudflare/reverse proxy, respeita X-Forwarded-Proto.
+if (config.proxy.forceHttps) {
+    app.use((req, res, next) => {
+        const proto = req.headers['x-forwarded-proto'];
+        if (req.secure || proto === 'https') return next();
+        return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+    });
+}
+
 app.use(cors({
     origin: (origin, cb) => {
-        if (!origin) return cb(null, true);
-        const localhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
-        const allowed = [
-            'http://localhost:5173',
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:5173',
-        ];
-        if (localhost || allowed.includes(origin) || isDev) {
-            cb(null, true);
-        } else {
-            cb(null, false);
-        }
+        if (isAllowedOrigin(origin)) return cb(null, true);
+        return cb(new Error(`CORS bloqueado para origem: ${origin}`), false);
     },
     credentials: true,
 }));
@@ -186,7 +207,7 @@ app.post('/docs/login', (req, res) => {
             httpOnly: true,
             sameSite: 'lax',
             signed: true,
-            // Em produção, definir secure:true se usar HTTPS
+            secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
         });
         return res.redirect('/docs');
     }

@@ -1,5 +1,23 @@
 services:
   # ============================================
+  # Cloudflare Tunnel - Exposicao HTTPS (443)
+  # ============================================
+  cloudflared:
+    image: cloudflare/cloudflared:2024.9.1
+    container_name: zaccess-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      TUNNEL_METRICS: 0.0.0.0:2000
+    networks:
+      - zaccess-network
+    depends_on:
+      - mongodb
+      - redis
+    profiles:
+      - cloudflare
+
+  # ============================================
   # MongoDB - Banco de dados principal
   # ============================================
   mongodb:

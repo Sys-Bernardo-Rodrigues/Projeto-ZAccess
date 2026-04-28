@@ -1,6 +1,12 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
+const parseCsv = (value = '') =>
+    value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
 module.exports = {
     nodeEnv: process.env.NODE_ENV || 'development',
     server: {
@@ -22,5 +28,12 @@ module.exports = {
     docs: {
         username: process.env.DOCS_USERNAME || '',
         password: process.env.DOCS_PASSWORD || '',
+    },
+    proxy: {
+        trustProxy: process.env.TRUST_PROXY || 'loopback',
+        forceHttps: process.env.FORCE_HTTPS === 'true',
+    },
+    cors: {
+        allowedOrigins: parseCsv(process.env.CORS_ALLOWED_ORIGINS || ''),
     },
 };
