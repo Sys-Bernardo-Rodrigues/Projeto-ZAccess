@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "start": "npx -y node@22.12.0 ./node_modules/expo/bin/cli start",
+    "android": "npx -y node@22.12.0 ./node_modules/expo/bin/cli start --android",
+    "ios": "npx -y node@22.12.0 ./node_modules/expo/bin/cli start --ios",
+    "web": "npx -y node@22.12.0 ./node_modules/expo/bin/cli start --web"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -28,5 +28,8 @@
     "react-native-screens": "~4.16.0",
     "react-native-web": "^0.21.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@expo/ngrok": "^4.1.3"
+  }
 }

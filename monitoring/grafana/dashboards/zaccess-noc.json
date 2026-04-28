@@ -4,14 +4,22 @@
   "title": "ZAccess - NOC (SLA/SLO)",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 4,
   "refresh": "10s",
   "panels": [
     {
       "type": "stat",
       "title": "Disponibilidade API (30d %)",
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "avg_over_time(up{job=\"zaccess_server\"}[30d]) * 100",
@@ -23,9 +31,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 99, "color": "yellow" },
-              { "value": 99.9, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 99,
+                "color": "yellow"
+              },
+              {
+                "value": 99.9,
+                "color": "green"
+              }
             ]
           },
           "unit": "percent"
@@ -36,8 +53,16 @@
     {
       "type": "stat",
       "title": "SLO Disponibilidade (meta %)",
-      "gridPos": { "h": 6, "w": 3, "x": 6, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "99.9",
@@ -50,7 +75,10 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" }
+              {
+                "value": null,
+                "color": "green"
+              }
             ]
           }
         },
@@ -60,8 +88,16 @@
     {
       "type": "stat",
       "title": "Error Budget Consumido (30d %)",
-      "gridPos": { "h": 6, "w": 6, "x": 9, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 9,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "((1 - avg_over_time(up{job=\"zaccess_server\"}[30d])) / 0.001) * 100",
@@ -74,9 +110,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" },
-              { "value": 50, "color": "yellow" },
-              { "value": 100, "color": "red" }
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 50,
+                "color": "yellow"
+              },
+              {
+                "value": 100,
+                "color": "red"
+              }
             ]
           }
         },
@@ -86,8 +131,16 @@
     {
       "type": "stat",
       "title": "Apdex (5m)",
-      "gridPos": { "h": 6, "w": 4, "x": 15, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 15,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "((sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"0.3\"}[5m])) + (sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"1.2\"}[5m])) - sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"0.3\"}[5m]))) / 2) / clamp_min(sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])), 1))",
@@ -101,9 +154,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 0.85, "color": "yellow" },
-              { "value": 0.94, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 0.85,
+                "color": "yellow"
+              },
+              {
+                "value": 0.94,
+                "color": "green"
+              }
             ]
           }
         },
@@ -113,8 +175,16 @@
     {
       "type": "stat",
       "title": "Incidentes Ativos (Alertas Firing)",
-      "gridPos": { "h": 6, "w": 5, "x": 19, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 19,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "sum(ALERTS{alertstate=\"firing\"})",
@@ -126,9 +196,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" },
-              { "value": 1, "color": "yellow" },
-              { "value": 3, "color": "red" }
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "yellow"
+              },
+              {
+                "value": 3,
+                "color": "red"
+              }
             ]
           }
         },
@@ -138,8 +217,16 @@
     {
       "type": "timeseries",
       "title": "RPS e Erro 5xx (5m)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{job=\"zaccess_server\"}[1m]))",
@@ -154,8 +241,16 @@
     {
       "type": "timeseries",
       "title": "Latencia p95 e p99 (s)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
@@ -170,8 +265,16 @@
     {
       "type": "timeseries",
       "title": "Saude Infra (CPU/Mem/Disco %)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
@@ -190,8 +293,16 @@
     {
       "type": "stat",
       "title": "MongoDB Status",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "up{job=\"mongodb_exporter\"}",
@@ -201,24 +312,76 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFFLINE"
+                },
+                "1": {
+                  "text": "ONLINE"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "SEM DADOS"
+                }
+              }
+            }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 1, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
         },
         "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "type": "stat",
       "title": "Redis Status",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "up{job=\"redis_exporter\"}",
@@ -228,24 +391,76 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFFLINE"
+                },
+                "1": {
+                  "text": "ONLINE"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "SEM DADOS"
+                }
+              }
+            }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 1, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
         },
         "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "type": "stat",
       "title": "Node Exporter Status",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "up{job=\"node_exporter\"}",
@@ -255,24 +470,76 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFFLINE"
+                },
+                "1": {
+                  "text": "ONLINE"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "SEM DADOS"
+                }
+              }
+            }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 1, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
         },
         "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "type": "timeseries",
       "title": "Eventos de Negocio por Tipo (5m)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "sum(rate(zaccess_business_events_total{job=\"zaccess_server\"}[5m])) by (event_type)",
@@ -283,8 +550,16 @@
     {
       "type": "timeseries",
       "title": "Top 10 Rotas Mais Lentas (p95)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "topk(10, histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le, route)))",
@@ -295,8 +570,16 @@
     {
       "type": "stat",
       "title": "Burn Rate 1h",
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 26 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[1h])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[1h])), 1e-9)) / 0.001",
@@ -308,9 +591,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" },
-              { "value": 6, "color": "yellow" },
-              { "value": 14.4, "color": "red" }
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 6,
+                "color": "yellow"
+              },
+              {
+                "value": 14.4,
+                "color": "red"
+              }
             ]
           }
         },
@@ -320,8 +612,16 @@
     {
       "type": "stat",
       "title": "Burn Rate 6h",
-      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 26 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[6h])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[6h])), 1e-9)) / 0.001",
@@ -333,9 +633,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" },
-              { "value": 3, "color": "yellow" },
-              { "value": 6, "color": "red" }
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 3,
+                "color": "yellow"
+              },
+              {
+                "value": 6,
+                "color": "red"
+              }
             ]
           }
         },
@@ -345,8 +654,16 @@
     {
       "type": "stat",
       "title": "SLO Violado (alerta)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "sum(ALERTS{alertname=~\"ZaccessErrorBudgetBurnRateFast|ZaccessErrorBudgetBurnRateSlow\",alertstate=\"firing\"})",
@@ -356,25 +673,72 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "range", "options": { "from": 0, "to": 0.99, "result": { "text": "NAO" } } },
-            { "type": "range", "options": { "from": 1, "to": 1000, "result": { "text": "SIM" } } }
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0.99,
+                "result": {
+                  "text": "OFF"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 1000,
+                "result": {
+                  "text": "ON"
+                }
+              }
+            }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" },
-              { "value": 1, "color": "red" }
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
             ]
           }
         },
         "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "type": "timeseries",
       "title": "Conformidade SLO 30d por Servico (%)",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 46 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "avg_over_time(up{job=\"zaccess_server\"}[30d]) * 100",
@@ -398,9 +762,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 99, "color": "yellow" },
-              { "value": 99.9, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 99,
+                "color": "yellow"
+              },
+              {
+                "value": 99.9,
+                "color": "green"
+              }
             ]
           }
         },
@@ -408,6 +781,10 @@
       }
     }
   ],
-  "templating": { "list": [] },
-  "annotations": { "list": [] }
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  }
 }

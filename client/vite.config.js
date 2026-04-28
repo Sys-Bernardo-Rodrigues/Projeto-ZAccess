@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Quando rodar via Docker, a API não fica em `localhost`.
+// Assim, fica configurável via ENV (`VITE_PROXY_TARGET`) e mantém default para dev local.
+const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:3000'
+
 // O Vite regista "ws proxy error" internamente; este plugin filtra ECONNRESET/ECONNREFUSED
 function suppressWsProxyErrors() {
   return {
@@ -35,14 +39,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
+    allowedHosts: ['zaccess.zroot.online', 'api.zroot.online', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: proxyTarget,
         changeOrigin: true,
         configure: proxyErrorHandler,
       },
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: proxyTarget,
         changeOrigin: true,
         ws: true,
         configure: proxyErrorHandler,

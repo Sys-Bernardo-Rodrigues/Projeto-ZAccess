@@ -4,7 +4,7 @@
   "title": "ZAccess - Eventos e Logs",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "15s",
   "time": {
     "from": "now-24h",
@@ -14,40 +14,159 @@
     {
       "type": "stat",
       "title": "Eventos (24h)",
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
     },
     {
       "type": "stat",
       "title": "Erros (24h)",
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "level: error OR level: warn",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "decimals": 2,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
     },
     {
       "type": "stat",
       "title": "Rotas Ativas (24h)",
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "bucketAggs": [
@@ -58,19 +177,74 @@
             }
           ],
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "route:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
     },
     {
       "type": "stat",
       "title": "Servicos Ativos (24h)",
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "bucketAggs": [
@@ -81,32 +255,129 @@
             }
           ],
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "service.name:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
     },
     {
       "type": "logs",
       "title": "Logs da API",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 5 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "query": "*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showLabels": true,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true
+      }
     },
     {
       "type": "table",
       "title": "Erros por nivel",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "bucketAggs": [
@@ -114,23 +385,70 @@
               "id": "2",
               "type": "terms",
               "field": "level.keyword",
-              "settings": { "size": 10, "order": "desc", "orderBy": "_count" }
+              "settings": {
+                "size": 10,
+                "order": "desc",
+                "orderBy": "_count"
+              }
             }
           ],
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "level:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
     },
     {
       "type": "table",
       "title": "Eventos por rota",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "bucketAggs": [
@@ -138,23 +456,70 @@
               "id": "2",
               "type": "terms",
               "field": "route.keyword",
-              "settings": { "size": 20, "order": "desc", "orderBy": "_count" }
+              "settings": {
+                "size": 20,
+                "order": "desc",
+                "orderBy": "_count"
+              }
             }
           ],
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "route:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
     },
     {
       "type": "table",
       "title": "Top mensagens de erro",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "bucketAggs": [
@@ -162,23 +527,70 @@
               "id": "2",
               "type": "terms",
               "field": "message.keyword",
-              "settings": { "size": 10, "order": "desc", "orderBy": "_count" }
+              "settings": {
+                "size": 10,
+                "order": "desc",
+                "orderBy": "_count"
+              }
             }
           ],
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "level:error OR level:warn",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
     },
     {
       "type": "table",
       "title": "Eventos por servico",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
       "targets": [
         {
           "bucketAggs": [
@@ -186,19 +598,90 @@
               "id": "2",
               "type": "terms",
               "field": "service.name.keyword",
-              "settings": { "size": 10, "order": "desc", "orderBy": "_count" }
+              "settings": {
+                "size": 10,
+                "order": "desc",
+                "orderBy": "_count"
+              }
             }
           ],
           "metrics": [
-            { "id": "1", "type": "count" }
+            {
+              "id": "1",
+              "type": "count"
+            }
           ],
           "query": "service.name:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
-      ]
+      ],
+      "transparent": false,
+      "pluginVersion": "11.2.2",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
     }
   ],
-  "templating": { "list": [] },
-  "annotations": { "list": [] }
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        }
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "style": "dark",
+  "tags": [
+    "zaccess",
+    "observability",
+    "production"
+  ]
 }

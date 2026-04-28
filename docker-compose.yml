@@ -183,6 +183,9 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_SECURITY_ALLOW_EMBEDDING: "false"
       GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_SERVER_DOMAIN: grafana.zroot.online
+      GF_SERVER_ROOT_URL: https://grafana.zroot.online
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -317,6 +320,47 @@ services:
       - zaccess-network
     depends_on:
       - mongodb
+
+  # API (server) dentro do mesmo network do compose
+  # Assim ela resolve `mongodb` e `redis` corretamente (sem `localhost`).
+  server:
+    build:
+      context: ./server
+    container_name: zaccess-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - zaccess-network
+
+  # Painel web (client) via Vite, usando Node 20+ dentro do container
+  client:
+    image: node:20-alpine
+    container_name: zaccess-client
+    restart: unless-stopped
+    working_dir: /app
+    networks:
+      - zaccess-network
+    volumes:
+      - ./client:/app
+      # evita re-instalar deps a cada restart
+      - /app/node_modules
+    environment:
+      # o proxy do Vite aponta para a API do container `server`
+      - VITE_PROXY_TARGET=http://server:3000
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173 --strictPort"
+    ports:
+      - "5173:5173"
+    depends_on:
+      server:
+        condition: service_started
 
 volumes:
   mongo-data:
