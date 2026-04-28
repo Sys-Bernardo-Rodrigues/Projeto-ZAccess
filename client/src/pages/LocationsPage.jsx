@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { Plus, MapPin, Trash2, Edit, X, Send, Cpu, LayoutList, LocateFixed, Navigation, Users, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Edit, X, Send, LayoutList, LocateFixed, Navigation, Users, UserPlus } from 'lucide-react';
 
 // Corrigindo o problema dos ícones do Leaflet no Webpack/Vite
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconRetinaUrl: markerIcon2x,
+    iconUrl: markerIcon,
+    shadowUrl: markerShadow,
 });
 
 // Ícone personalizado Neon para o Mapa
