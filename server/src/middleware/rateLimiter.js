@@ -22,4 +22,12 @@ const authLimiter = rateLimit({
     },
 });
 
-module.exports = { apiLimiter, authLimiter };
+const docsLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 8,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Muitas tentativas no login da documentação. Tente novamente em 15 minutos.',
+});
+
+module.exports = { apiLimiter, authLimiter, docsLoginLimiter };

@@ -14,7 +14,7 @@ const { connectRedis } = require('./config/redis');
 const logger = require('./utils/logger');
 const { register, metricsMiddleware } = require('./metrics');
 const errorHandler = require('./middleware/errorHandler');
-const { apiLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter, docsLoginLimiter } = require('./middleware/rateLimiter');
 const openapiSpec = require('./docs/openapi');
 
 // Routes
@@ -43,6 +43,7 @@ const app = express();
 const server = http.createServer(app);
 
 const isDev = config.nodeEnv !== 'production';
+const isProd = config.nodeEnv === 'production';
 
 const defaultAllowedOrigins = [
     'http://localhost:5173',
@@ -83,8 +84,35 @@ app.set('io', io);
 // ============================================
 // Middleware
 // ============================================
-app.use(helmet());
+app.disable('x-powered-by');
+app.use(helmet({
+    hsts: isProd
+        ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+        }
+        : false,
+}));
 app.set('trust proxy', config.proxy.trustProxy);
+
+const metricsAuth = (req, res, next) => {
+    const configuredToken = config.metrics.token;
+    if (!configuredToken) return next();
+
+    const metricsToken = req.headers['x-metrics-token'];
+    const authHeader = req.headers.authorization || '';
+    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (metricsToken === configuredToken || bearerToken === configuredToken) {
+        return next();
+    }
+
+    return res.status(401).json({
+        success: false,
+        message: 'Não autorizado para acessar métricas.',
+    });
+};
 
 // Quando a API esta atras de Cloudflare/reverse proxy, respeita X-Forwarded-Proto.
 if (config.proxy.forceHttps) {
@@ -157,6 +185,8 @@ app.get('/docs/login', (req, res) => {
     }
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
     res.send(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -195,7 +225,7 @@ app.get('/docs/login', (req, res) => {
 });
 
 // Tela de login (POST)
-app.post('/docs/login', (req, res) => {
+app.post('/docs/login', docsLoginLimiter, (req, res) => {
     const { username, password } = config.docs;
     if (!username || !password) {
         return res.status(503).send('Documentação desabilitada: DOCS_USERNAME/DOCS_PASSWORD não configurados.');
@@ -207,6 +237,7 @@ app.post('/docs/login', (req, res) => {
             httpOnly: true,
             sameSite: 'lax',
             signed: true,
+            maxAge: 8 * 60 * 60 * 1000,
             secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
         });
         return res.redirect('/docs');
@@ -251,7 +282,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // Endpoint Prometheus
-app.get('/metrics', async (_req, res) => {
+app.get('/metrics', metricsAuth, async (_req, res) => {
+    res.set('Cache-Control', 'no-store');
     res.set('Content-Type', register.contentType);
     const metrics = await register.metrics();
     res.send(metrics);

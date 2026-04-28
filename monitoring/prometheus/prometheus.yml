@@ -23,6 +23,9 @@ scrape_configs:
 
   - job_name: zaccess_server
     metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials: ${METRICS_TOKEN}
     static_configs:
       - targets: [ "server:3000" ]
 

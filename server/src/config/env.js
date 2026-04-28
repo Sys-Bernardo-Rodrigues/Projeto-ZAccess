@@ -29,6 +29,9 @@ module.exports = {
         username: process.env.DOCS_USERNAME || '',
         password: process.env.DOCS_PASSWORD || '',
     },
+    metrics: {
+        token: process.env.METRICS_TOKEN || '',
+    },
     proxy: {
         trustProxy: process.env.TRUST_PROXY || 'loopback',
         forceHttps: process.env.FORCE_HTTPS === 'true',
