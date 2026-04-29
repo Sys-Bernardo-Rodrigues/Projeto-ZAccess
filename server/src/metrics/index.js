@@ -1,4 +1,7 @@
 const client = require('prom-client');
+const Device = require('../models/Device');
+const Location = require('../models/Location');
+const ActivityLog = require('../models/ActivityLog');
 
 const register = new client.Registry();
 client.collectDefaultMetrics({ register, prefix: 'zaccess_' });
@@ -22,9 +25,122 @@ const businessEventsTotal = new client.Counter({
     labelNames: ['event_type', 'outcome'],
 });
 
+const mongoDevicesTotal = new client.Gauge({
+    name: 'zaccess_mongo_devices_total',
+    help: 'Total de devices cadastrados no MongoDB',
+    async collect() {
+        try {
+            this.set(await Device.countDocuments({}));
+        } catch {
+            this.set(0);
+        }
+    },
+});
+
+const mongoDevicesActiveTotal = new client.Gauge({
+    name: 'zaccess_mongo_devices_active_total',
+    help: 'Total de devices ativos no MongoDB',
+    async collect() {
+        try {
+            this.set(await Device.countDocuments({ active: true }));
+        } catch {
+            this.set(0);
+        }
+    },
+});
+
+const mongoLocationsTotal = new client.Gauge({
+    name: 'zaccess_mongo_locations_total',
+    help: 'Total de locations cadastradas no MongoDB',
+    async collect() {
+        try {
+            this.set(await Location.countDocuments({}));
+        } catch {
+            this.set(0);
+        }
+    },
+});
+
+const mongoActivityLogsTotal = new client.Gauge({
+    name: 'zaccess_mongo_activity_logs_total',
+    help: 'Total de registros de activity log no MongoDB',
+    async collect() {
+        try {
+            this.set(await ActivityLog.countDocuments({}));
+        } catch {
+            this.set(0);
+        }
+    },
+});
+
+const mongoReportsAccessEvents24h = new client.Gauge({
+    name: 'zaccess_mongo_reports_access_events_24h_total',
+    help: 'Eventos de acesso usados no relatorio de access nas ultimas 24h',
+    async collect() {
+        try {
+            const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            this.set(await ActivityLog.countDocuments({
+                action: { $in: ['relay_activated', 'automation_executed', 'schedule_executed'] },
+                createdAt: { $gte: since },
+            }));
+        } catch {
+            this.set(0);
+        }
+    },
+});
+
+const mongoActivityLogs24h = new client.Gauge({
+    name: 'zaccess_mongo_activity_logs_24h_total',
+    help: 'Total de logs de atividade nas ultimas 24h',
+    async collect() {
+        try {
+            const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            this.set(await ActivityLog.countDocuments({ createdAt: { $gte: since } }));
+        } catch {
+            this.set(0);
+        }
+    },
+});
+
+const mongoActivityLogRecent = new client.Gauge({
+    name: 'zaccess_mongo_activity_log_recent',
+    help: 'Ultimos logs do MongoDB para tabela operacional',
+    labelNames: ['status_evento', 'descricao_log', 'dispositivo_origem', 'operador', 'data_hora'],
+    async collect() {
+        try {
+            this.reset();
+            const rows = await ActivityLog.find({})
+                .populate('deviceId', 'name serialNumber')
+                .populate('userId', 'name email')
+                .sort({ createdAt: -1 })
+                .limit(50);
+
+            rows.forEach((log, idx) => {
+                const statusEvento = `${log.severity || 'info'} / ${log.action || 'evento'}`;
+                const descricaoRaw = log.description || '-';
+                const descricao = String(descricaoRaw).slice(0, 180);
+                const dispositivo = log.deviceId?.name || 'Sistêmica';
+                const operador = log.userId?.name || 'Sistema';
+                const dataHora = log.createdAt ? new Date(log.createdAt).toISOString() : '-';
+                // Value only preserves ordering in table sorting.
+                this.labels(statusEvento, descricao, dispositivo, operador, dataHora).set(50 - idx);
+            });
+        } catch {
+            this.reset();
+        }
+    },
+});
+
 register.registerMetric(httpRequestDuration);
 register.registerMetric(httpRequestsTotal);
 register.registerMetric(businessEventsTotal);
+register.registerMetric(mongoDevicesTotal);
+register.registerMetric(mongoDevicesActiveTotal);
+register.registerMetric(mongoLocationsTotal);
+register.registerMetric(mongoActivityLogsTotal);
+register.registerMetric(mongoReportsAccessEvents24h);
+register.registerMetric(mongoActivityLogs24h);
+register.registerMetric(mongoActivityLogRecent);
 
 const normalizeRoute = (routePath = '') => {
     if (!routePath || routePath === '/') return '/';
