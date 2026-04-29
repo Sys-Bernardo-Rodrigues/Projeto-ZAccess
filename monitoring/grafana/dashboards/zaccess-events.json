@@ -4,7 +4,7 @@
   "title": "ZAccess - Eventos e Logs",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 125,
   "refresh": "15s",
   "time": {
     "from": "now-24h",
@@ -34,7 +34,18 @@
           ],
           "query": "*",
           "refId": "A",
-          "timeField": "@timestamp"
+          "timeField": "@timestamp",
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": 0
+              }
+            }
+          ]
         }
       ],
       "transparent": false,
@@ -103,9 +114,20 @@
               "type": "count"
             }
           ],
-          "query": "level: error OR level: warn",
+          "query": "level:(error OR warn)",
           "refId": "A",
-          "timeField": "@timestamp"
+          "timeField": "@timestamp",
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": 0
+              }
+            }
+          ]
         }
       ],
       "transparent": false,
@@ -134,7 +156,7 @@
             ]
           },
           "decimals": 2,
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -156,7 +178,7 @@
     },
     {
       "type": "stat",
-      "title": "Rotas Ativas (24h)",
+      "title": "Arquivos de log ativos (24h)",
       "gridPos": {
         "h": 5,
         "w": 6,
@@ -169,22 +191,27 @@
       },
       "targets": [
         {
-          "bucketAggs": [
-            {
-              "id": "2",
-              "type": "cardinality",
-              "field": "route.keyword"
-            }
-          ],
           "metrics": [
             {
               "id": "1",
-              "type": "count"
+              "type": "cardinality",
+              "field": "log.file.path.keyword"
             }
           ],
-          "query": "route:*",
+          "query": "log.file.path:*",
           "refId": "A",
-          "timeField": "@timestamp"
+          "timeField": "@timestamp",
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "1d",
+                "min_doc_count": 0
+              }
+            }
+          ]
         }
       ],
       "transparent": false,
@@ -247,22 +274,27 @@
       },
       "targets": [
         {
-          "bucketAggs": [
+          "metrics": [
             {
-              "id": "2",
+              "id": "1",
               "type": "cardinality",
               "field": "service.name.keyword"
             }
           ],
-          "metrics": [
-            {
-              "id": "1",
-              "type": "count"
-            }
-          ],
           "query": "service.name:*",
           "refId": "A",
-          "timeField": "@timestamp"
+          "timeField": "@timestamp",
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "1d",
+                "min_doc_count": 0
+              }
+            }
+          ]
         }
       ],
       "transparent": false,
@@ -312,7 +344,7 @@
     },
     {
       "type": "logs",
-      "title": "Logs da API",
+      "title": "Ultimos logs da API",
       "gridPos": {
         "h": 12,
         "w": 24,
@@ -325,44 +357,41 @@
       },
       "targets": [
         {
-          "query": "*",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "elasticsearch"
+          },
+          "query": "service.name:zaccess-server",
           "refId": "A",
-          "timeField": "@timestamp"
+          "timeField": "@timestamp",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "logs",
+              "settings": {
+                "limit": "200",
+                "direction": "desc"
+              }
+            }
+          ],
+          "bucketAggs": []
         }
       ],
       "transparent": false,
       "pluginVersion": "11.2.2",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 70,
-                "color": "yellow"
-              },
-              {
-                "value": 90,
-                "color": "red"
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
       "options": {
-        "showLabels": true,
         "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
         "wrapLogMessage": true,
-        "enableLogDetails": true
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
       }
     },
     {
@@ -384,7 +413,7 @@
             {
               "id": "2",
               "type": "terms",
-              "field": "level.keyword",
+              "field": "level",
               "settings": {
                 "size": 10,
                 "order": "desc",
@@ -438,7 +467,7 @@
     },
     {
       "type": "table",
-      "title": "Eventos por rota",
+      "title": "Eventos por arquivo de log",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -455,7 +484,7 @@
             {
               "id": "2",
               "type": "terms",
-              "field": "route.keyword",
+              "field": "log.file.path",
               "settings": {
                 "size": 20,
                 "order": "desc",
@@ -469,7 +498,7 @@
               "type": "count"
             }
           ],
-          "query": "route:*",
+          "query": "log.file.path:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
@@ -508,8 +537,8 @@
       }
     },
     {
-      "type": "table",
-      "title": "Top mensagens de erro",
+      "type": "logs",
+      "title": "Ultimos logs do Docker (todos containers)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -522,60 +551,41 @@
       },
       "targets": [
         {
-          "bucketAggs": [
-            {
-              "id": "2",
-              "type": "terms",
-              "field": "message.keyword",
-              "settings": {
-                "size": 10,
-                "order": "desc",
-                "orderBy": "_count"
-              }
-            }
-          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "elasticsearch"
+          },
+          "query": "container.id:*",
+          "refId": "A",
+          "timeField": "@timestamp",
           "metrics": [
             {
               "id": "1",
-              "type": "count"
+              "type": "logs",
+              "settings": {
+                "limit": "200",
+                "direction": "desc"
+              }
             }
           ],
-          "query": "level:error OR level:warn",
-          "refId": "A",
-          "timeField": "@timestamp"
+          "bucketAggs": []
         }
       ],
       "transparent": false,
       "pluginVersion": "11.2.2",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 70,
-                "color": "yellow"
-              },
-              {
-                "value": 90,
-                "color": "red"
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
       "options": {
-        "showHeader": true,
-        "cellHeight": "sm"
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
       }
     },
     {
@@ -597,7 +607,7 @@
             {
               "id": "2",
               "type": "terms",
-              "field": "service.name.keyword",
+              "field": "service.name",
               "settings": {
                 "size": 10,
                 "order": "desc",
@@ -681,6 +691,8 @@
   "style": "dark",
   "tags": [
     "zaccess",
+    "eventos",
+    "logs",
     "observability",
     "production"
   ]

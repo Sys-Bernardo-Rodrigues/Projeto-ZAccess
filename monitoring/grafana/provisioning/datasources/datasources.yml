@@ -20,4 +20,6 @@ datasources:
       timeField: "@timestamp"
       interval: Daily
       esVersion: "8.0.0"
+      logMessageField: message
+      logLevelField: level
     editable: false

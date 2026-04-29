@@ -9,6 +9,15 @@ filebeat.inputs:
           target: ""
           overwrite_keys: true
           add_error_key: true
+  - type: filestream
+    id: zaccess-docker-containers
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*-json.log
+    parsers:
+      - container:
+          stream: all
+          format: docker
 
 processors:
   - add_fields:

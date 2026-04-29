@@ -4,7 +4,7 @@
   "title": "ZAccess - Overview Executivo",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 4,
+  "version": 7,
   "refresh": "10s",
   "panels": [
     {
@@ -22,7 +22,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"zaccess_server\"}",
+          "expr": "max(up{job=\"zaccess_server\"} or vector(0))",
           "refId": "A"
         }
       ],
@@ -101,7 +101,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"prometheus\"}",
+          "expr": "max(up{job=\"prometheus\"} or vector(0))",
           "refId": "A"
         }
       ],
@@ -180,7 +180,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"mongodb_exporter\"}",
+          "expr": "max(up{job=\"mongodb_exporter\"} or vector(0))",
           "refId": "A"
         }
       ],
@@ -259,7 +259,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"redis_exporter\"}",
+          "expr": "max(up{job=\"redis_exporter\"} or vector(0))",
           "refId": "A"
         }
       ],
@@ -338,7 +338,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"node_exporter\"}",
+          "expr": "max(up{job=\"node_exporter\"} or vector(0))",
           "refId": "A"
         }
       ],
@@ -417,7 +417,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"cadvisor\"}",
+          "expr": "max(up{job=\"cadvisor\"} or vector(0))",
           "refId": "A"
         }
       ],
@@ -496,11 +496,11 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"zaccess_server\"}[1m]))",
+          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\"}[1m])) or vector(0))",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m]))",
+          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m])) or vector(0))",
           "refId": "B"
         }
       ]
@@ -520,11 +520,11 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
+          "expr": "((histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le)) and on() (sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])) > 0)) or vector(0))",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
+          "expr": "((histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le)) and on() (sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])) > 0)) or vector(0))",
           "refId": "B"
         }
       ]
@@ -579,5 +579,12 @@
   },
   "annotations": {
     "list": []
-  }
+  },
+  "tags": [
+    "zaccess",
+    "overview",
+    "executivo",
+    "observability",
+    "production"
+  ]
 }

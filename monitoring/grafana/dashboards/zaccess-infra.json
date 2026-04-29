@@ -4,7 +4,7 @@
   "title": "ZAccess - Infra e Containers",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "15s",
   "panels": [
     {
@@ -527,7 +527,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\"}[5m])) by (name) * 100",
+          "expr": "(topk(15, sum by (id) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\",cpu=\"total\",id!=\"/\",id!=\"/system.slice\",id!=\"/user.slice\",id!=\"/init.scope\"}[5m])) * 100) or vector(0))",
           "refId": "A"
         }
       ],
@@ -609,7 +609,7 @@
       },
       "targets": [
         {
-          "expr": "sum(container_memory_usage_bytes{name!=\"\"}) by (name)",
+          "expr": "(topk(15, sum by (id) (container_memory_usage_bytes{job=\"cadvisor\",id!=\"/\",id!=\"/system.slice\",id!=\"/user.slice\",id!=\"/init.scope\"})) or vector(0))",
           "refId": "A"
         }
       ],
@@ -655,7 +655,7 @@
               "type": "linear"
             }
           },
-          "unit": "percent"
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -953,6 +953,8 @@
   "style": "dark",
   "tags": [
     "zaccess",
+    "infra",
+    "containers",
     "observability",
     "production"
   ],

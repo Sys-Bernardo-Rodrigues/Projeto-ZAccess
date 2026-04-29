@@ -252,6 +252,8 @@ services:
     volumes:
       - ./monitoring/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - ./server/logs:/var/log/zaccess:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - zaccess-network
     depends_on:
@@ -332,6 +334,8 @@ services:
       - .env
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
+    volumes:
+      - ./server/logs:/app/logs
     depends_on:
       mongodb:
         condition: service_healthy

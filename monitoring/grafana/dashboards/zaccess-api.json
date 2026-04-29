@@ -4,7 +4,7 @@
   "title": "ZAccess - API",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 5,
   "refresh": "15s",
   "panels": [
     {
@@ -22,7 +22,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"zaccess_server\"}[1m]))",
+          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\"}[1m])) or vector(0))",
           "refId": "A"
         }
       ],
@@ -87,7 +87,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[5m])), 1)) * 100",
+          "expr": "(((sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[5m])), 1)) * 100) or vector(0))",
           "refId": "A"
         }
       ],
@@ -152,7 +152,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
+          "expr": "((histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le)) and on() (sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])) > 0)) or vector(0))",
           "refId": "A"
         }
       ],
@@ -217,7 +217,7 @@
       },
       "targets": [
         {
-          "expr": "process_uptime_seconds{job=\"zaccess_server\"}",
+          "expr": "((max(time() - zaccess_process_start_time_seconds{job=\"zaccess_server\"})) or vector(0))",
           "refId": "A"
         }
       ],
@@ -282,7 +282,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"zaccess_server\"}[1m]))",
+          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\"}[1m])) or vector(0))",
           "refId": "A"
         }
       ],
@@ -364,7 +364,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
+          "expr": "((histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le)) and on() (sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])) > 0)) or vector(0))",
           "refId": "A"
         }
       ],
@@ -446,7 +446,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"4..|5..\"}[5m])) by (status) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[5m])), 1)) * 100",
+          "expr": "(((sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"4..|5..\"}[5m])) by (status) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[5m])), 1)) * 100) or vector(0))",
           "refId": "A"
         }
       ],
@@ -609,7 +609,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le, method))",
+          "expr": "(histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le, method)) or vector(0))",
           "refId": "A"
         }
       ],
@@ -789,6 +789,7 @@
   "style": "dark",
   "tags": [
     "zaccess",
+    "api",
     "observability",
     "production"
   ],

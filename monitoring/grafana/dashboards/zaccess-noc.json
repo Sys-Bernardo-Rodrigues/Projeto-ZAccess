@@ -4,722 +4,63 @@
   "title": "ZAccess - NOC (SLA/SLO)",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 4,
+  "version": 10,
   "refresh": "10s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "panels": [
     {
       "type": "stat",
-      "title": "Disponibilidade API (30d %)",
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "avg_over_time(up{job=\"zaccess_server\"}[30d]) * 100",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 99,
-                "color": "yellow"
-              },
-              {
-                "value": 99.9,
-                "color": "green"
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "title": "SLO Disponibilidade (meta %)",
-      "gridPos": {
-        "h": 6,
-        "w": 3,
-        "x": 6,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "99.9",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Error Budget Consumido (30d %)",
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 9,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "((1 - avg_over_time(up{job=\"zaccess_server\"}[30d])) / 0.001) * 100",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 50,
-                "color": "yellow"
-              },
-              {
-                "value": 100,
-                "color": "red"
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Apdex (5m)",
-      "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 15,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "((sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"0.3\"}[5m])) + (sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"1.2\"}[5m])) - sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\",le=\"0.3\"}[5m]))) / 2) / clamp_min(sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])), 1))",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 0.85,
-                "color": "yellow"
-              },
-              {
-                "value": 0.94,
-                "color": "green"
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Incidentes Ativos (Alertas Firing)",
-      "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 19,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum(ALERTS{alertstate=\"firing\"})",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 1,
-                "color": "yellow"
-              },
-              {
-                "value": 3,
-                "color": "red"
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "RPS e Erro 5xx (5m)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(http_requests_total{job=\"zaccess_server\"}[1m]))",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m]))",
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Latencia p95 e p99 (s)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le))",
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Saude Infra (CPU/Mem/Disco %)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-          "refId": "A"
-        },
-        {
-          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
-          "refId": "B"
-        },
-        {
-          "expr": "max(((node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"}) * 100)",
-          "refId": "C"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "MongoDB Status",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 22
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "up{job=\"mongodb_exporter\"}",
-          "refId": "A"
-        }
-      ],
+      "title": "API Status",
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "max(up{job=\"zaccess_server\"} or vector(0))", "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "OFFLINE"
-                },
-                "1": {
-                  "text": "ONLINE"
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "SEM DADOS"
-                }
-              }
-            }
+            { "type": "value", "options": { "0": { "text": "OFFLINE" }, "1": { "text": "ONLINE" } } }
           ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 1,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] },
+          "color": { "mode": "thresholds" },
           "decimals": 0
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
         "orientation": "horizontal",
-        "showPercentChange": false,
         "textMode": "value_and_name",
         "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "center"
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Redis Status",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 22
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "up{job=\"redis_exporter\"}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "OFFLINE"
-                },
-                "1": {
-                  "text": "ONLINE"
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "SEM DADOS"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 1,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "orientation": "horizontal",
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "colorMode": "background_solid",
-        "graphMode": "none",
-        "justifyMode": "center"
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Node Exporter Status",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 22
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "up{job=\"node_exporter\"}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "OFFLINE"
-                },
-                "1": {
-                  "text": "ONLINE"
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "SEM DADOS"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 1,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "orientation": "horizontal",
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "colorMode": "background_solid",
-        "graphMode": "none",
-        "justifyMode": "center"
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Eventos de Negocio por Tipo (5m)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(zaccess_business_events_total{job=\"zaccess_server\"}[5m])) by (event_type)",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Top 10 Rotas Mais Lentas (p95)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 30
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "topk(10, histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le, route)))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Burn Rate 1h",
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 0,
-        "y": 26
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[1h])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[1h])), 1e-9)) / 0.001",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 6,
-                "color": "yellow"
-              },
-              {
-                "value": 14.4,
-                "color": "red"
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Burn Rate 6h",
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 6,
-        "y": 26
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[6h])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[6h])), 1e-9)) / 0.001",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 3,
-                "color": "yellow"
-              },
-              {
-                "value": 6,
-                "color": "red"
-              }
-            ]
-          }
-        },
-        "overrides": []
       }
     },
     {
       "type": "stat",
       "title": "SLO Violado (alerta)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(ALERTS{alertname=~\"ZaccessErrorBudgetBurnRateFast|ZaccessErrorBudgetBurnRateSlow\",alertstate=\"firing\"})",
+          "expr": "(sum(ALERTS{alertname=~\"ZaccessErrorBudgetBurnRateFast|ZaccessErrorBudgetBurnRateSlow\",alertstate=\"firing\"}) or vector(0))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            {
-              "type": "range",
-              "options": {
-                "from": 0,
-                "to": 0.99,
-                "result": {
-                  "text": "OFF"
-                }
-              }
-            },
-            {
-              "type": "range",
-              "options": {
-                "from": 1,
-                "to": 1000,
-                "result": {
-                  "text": "ON"
-                }
-              }
-            }
+            { "type": "range", "options": { "from": 0, "to": 0.99, "result": { "text": "OFF" } } },
+            { "type": "range", "options": { "from": 1, "to": 1000, "result": { "text": "ON" } } }
           ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 1,
-                "color": "red"
-              }
-            ]
-          }
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "red" }] }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
         "orientation": "horizontal",
-        "showPercentChange": false,
         "textMode": "value_and_name",
         "colorMode": "background_solid",
         "graphMode": "none",
@@ -727,64 +68,135 @@
       }
     },
     {
-      "type": "timeseries",
-      "title": "Conformidade SLO 30d por Servico (%)",
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 46
+      "type": "stat",
+      "title": "Disponibilidade API (24h %)",
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "((100 * max(sum_over_time(up{job=\"zaccess_server\"}[24h])) / clamp_min(max(count_over_time(up{job=\"zaccess_server\"}[24h])), 1)) or vector(0))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 99, "color": "yellow" }, { "value": 99.9, "color": "green" }] }
+        },
+        "overrides": []
       },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" } }
+    },
+    {
+      "type": "stat",
+      "title": "Error Budget Consumido (24h %)",
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "avg_over_time(up{job=\"zaccess_server\"}[30d]) * 100",
-          "legendFormat": "API",
+          "expr": "((clamp_max((((1 - (max(sum_over_time(up{job=\"zaccess_server\"}[24h])) / clamp_min(max(count_over_time(up{job=\"zaccess_server\"}[24h])), 1))) / 0.001) * 100), 1000) and on() (max(count_over_time(up{job=\"zaccess_server\"}[24h])) >= 1000)) or vector(0))",
           "refId": "A"
-        },
-        {
-          "expr": "avg_over_time(up{job=\"redis_exporter\"}[30d]) * 100",
-          "legendFormat": "Redis",
-          "refId": "B"
-        },
-        {
-          "expr": "avg_over_time(up{job=\"mongodb_exporter\"}[30d]) * 100",
-          "legendFormat": "MongoDB",
-          "refId": "C"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 99,
-                "color": "yellow"
-              },
-              {
-                "value": 99.9,
-                "color": "green"
-              }
-            ]
-          }
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 50, "color": "yellow" }, { "value": 100, "color": "red" }] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" } }
+    },
+    {
+      "type": "stat",
+      "title": "RPS Atual",
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\"}[1m])) or vector(0))", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" } }
+    },
+    {
+      "type": "stat",
+      "title": "Erro 5xx (5m %)",
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "(((sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[5m])), 1)) * 100) or vector(0))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "yellow" }, { "value": 5, "color": "red" }] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS e Erro 5xx (5m)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\"}[1m])) or vector(0))", "legendFormat": "RPS", "refId": "A" },
+        { "expr": "(sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[5m])) or vector(0))", "legendFormat": "5xx RPS", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia p95 e p99 (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "((histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le)) and on() (sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])) > 0)) or vector(0))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "((histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"zaccess_server\"}[5m])) by (le)) and on() (sum(rate(http_request_duration_seconds_count{job=\"zaccess_server\"}[5m])) > 0)) or vector(0))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disponibilidade por Servico (24h %)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "((max(avg_over_time(up{job=\"zaccess_server\"}[24h])) * 100) or vector(0))", "legendFormat": "API", "refId": "A" },
+        { "expr": "((max(avg_over_time(up{job=\"redis_exporter\"}[24h])) * 100) or vector(0))", "legendFormat": "Redis", "refId": "B" },
+        { "expr": "((max(avg_over_time(up{job=\"mongodb_exporter\"}[24h])) * 100) or vector(0))", "legendFormat": "MongoDB", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 99, "color": "yellow" }, { "value": 99.9, "color": "green" }] }
         },
         "overrides": []
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Burn Rate (1h / 6h)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "(((sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[1h])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[1h])), 1e-9)) / 0.001) or vector(0))",
+          "legendFormat": "Burn 1h",
+          "refId": "A"
+        },
+        {
+          "expr": "(((sum(rate(http_requests_total{job=\"zaccess_server\",status=~\"5..\"}[6h])) / clamp_min(sum(rate(http_requests_total{job=\"zaccess_server\"}[6h])), 1e-9)) / 0.001) or vector(0))",
+          "legendFormat": "Burn 6h",
+          "refId": "B"
+        }
+      ]
     }
   ],
-  "templating": {
-    "list": []
-  },
-  "annotations": {
-    "list": []
-  }
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "tags": ["zaccess", "noc", "slo", "sla", "observability", "production"]
 }
