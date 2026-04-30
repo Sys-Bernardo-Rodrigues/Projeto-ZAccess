@@ -357,8 +357,8 @@ services:
       # evita re-instalar deps a cada restart
       - /app/node_modules
     environment:
-      # o proxy do Vite aponta para a API do container `server`
-      - VITE_PROXY_TARGET=http://server:3000
+      # o proxy do Vite aponta para a API do container `server` (mesma porta que SERVER_PORT no .env)
+      - VITE_PROXY_TARGET=http://server:${SERVER_PORT:-3000}
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173 --strictPort"
     ports:
       - "5173:5173"

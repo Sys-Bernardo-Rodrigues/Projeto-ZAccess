@@ -39,7 +39,12 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
-    allowedHosts: ['zaccess.zroot.online', 'api.zroot.online', 'localhost'],
+    allowedHosts: [
+      'api.zroot.online',
+      'zaccess.zroot.online',
+      'zacess.zroot.online',
+      'localhost',
+    ],
     proxy: {
       '/api': {
         target: proxyTarget,

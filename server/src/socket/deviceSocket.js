@@ -52,6 +52,8 @@ module.exports = (io) => {
                 lastHeartbeat: now,
                 ipAddress: socket.handshake.address,
             });
+            // Manter documento em memória alinhado ao DB (evita timeout falso no interval abaixo)
+            device.lastHeartbeat = now;
 
             // Cache no Redis
             const redis = getRedisClient();
@@ -119,6 +121,7 @@ module.exports = (io) => {
 
             socket.on('heartbeat', async (data) => {
                 const now = new Date();
+                device.lastHeartbeat = now;
                 await Device.findByIdAndUpdate(device._id, { lastHeartbeat: now });
 
                 await redis.set(

@@ -119,7 +119,7 @@ O servidor lê o `.env` da **raiz do repositório**.
 ## Deploy produção (VPS + Cloudflare)
 
 ### Cenário alvo
-- Domínio público: `https://zaccess.zroot.online`
+- Domínio público (API + painel): `https://api.zroot.online`
 - HTTPS/porta 443: terminados no Cloudflare
 - API de origem na VPS: `http://127.0.0.1:3000` (ou `http://SEU_HOST:3000`)
 
@@ -132,14 +132,14 @@ NODE_ENV=production
 SERVER_PORT=3000
 SERVER_HOST=0.0.0.0
 
-TRUST_PROXY=loopback
+TRUST_PROXY=1
 FORCE_HTTPS=true
-CORS_ALLOWED_ORIGINS=https://zaccess.zroot.online
+CORS_ALLOWED_ORIGINS=https://api.zroot.online
 
-PUBLIC_BASE_URL=https://zaccess.zroot.online
-VITE_API_URL=https://zaccess.zroot.online
-VITE_WS_URL=https://zaccess.zroot.online
-EXPO_PUBLIC_API_URL=https://zaccess.zroot.online
+PUBLIC_BASE_URL=https://api.zroot.online
+VITE_API_URL=https://api.zroot.online
+VITE_WS_URL=https://api.zroot.online
+EXPO_PUBLIC_API_URL=https://api.zroot.online
 
 CLOUDFLARE_TUNNEL_TOKEN=seu_token_do_tunnel
 ```
@@ -147,7 +147,7 @@ CLOUDFLARE_TUNNEL_TOKEN=seu_token_do_tunnel
 ### 2) Configurar Cloudflare
 
 - SSL/TLS em `Full` (ou `Full (strict)` se tiver certificado de origem).
-- Tunnel com hostname `zaccess.zroot.online`.
+- Tunnel com hostname `api.zroot.online` (e rotas para a origem abaixo).
 - Origem do tunnel apontando para `http://SEU_HOST:3000`.
 - Rotas usadas pela aplicação:
   - `/api/*`
@@ -164,8 +164,8 @@ docker compose --profile cloudflare up -d cloudflared
 ### 4) Verificação pós-deploy
 
 ```bash
-curl -I https://zaccess.zroot.online/api/health
-curl https://zaccess.zroot.online/api/health
+curl -I https://api.zroot.online/api/health
+curl https://api.zroot.online/api/health
 ```
 
 Resultado esperado:
