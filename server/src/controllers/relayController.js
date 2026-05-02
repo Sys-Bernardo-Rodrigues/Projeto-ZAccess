@@ -222,7 +222,7 @@ exports.generateRelayAccessQr = async (req, res, next) => {
                 name: relay.name,
                 deviceName: relay.deviceId?.name || '',
             },
-        }, 'QR de abertura direta gerado com sucesso.');
+        }, 'QR gerado. O convidado deve ler este código apenas na página do convite (/invite/…).');
     } catch (error) {
         next(error);
     }
@@ -267,29 +267,63 @@ exports.triggerRelayByQr = async (req, res, next) => {
 };
 
 // POST /api/relays/public/qr-trigger
+// Exige inviteToken: só funciona no contexto da página /invite/:token (leitor de QR do convite).
 exports.triggerRelayByQrPublic = async (req, res, next) => {
     try {
-        const { token } = req.body;
+        const { token, inviteToken } = req.body;
         if (!token) {
             return apiResponse(res, 400, null, 'Token QR é obrigatório.');
         }
+        if (!inviteToken || typeof inviteToken !== 'string' || !inviteToken.trim()) {
+            return apiResponse(res, 400, null, 'Este QR da porta só funciona dentro do link de convite. Abra /invite/… no navegador e use «Ler QR Code para liberar».');
+        }
 
-        const decoded = jwt.verify(token, config.jwt.secret);
+        const invitation = await Invitation.findOne({ token: inviteToken.trim(), active: true })
+            .populate({
+                path: 'relayIds',
+                populate: { path: 'deviceId' },
+            });
+
+        if (!invitation) {
+            return apiResponse(res, 404, null, 'Convite não encontrado ou inválido.');
+        }
+
+        const now = new Date();
+        if (now < invitation.validFrom) {
+            return apiResponse(res, 403, null, 'Este convite ainda não é válido.');
+        }
+        if (now > invitation.validUntil) {
+            return apiResponse(res, 403, null, 'Este convite expirou.');
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token, config.jwt.secret);
+        } catch (err) {
+            if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+                return apiResponse(res, 400, null, 'QR Code inválido ou expirado.');
+            }
+            throw err;
+        }
         if (decoded.type !== 'relay_qr' || !decoded.relayId) {
             return apiResponse(res, 400, null, 'Token QR inválido.');
+        }
+
+        const relayAllowed = invitation.relayIds.some(
+            (r) => (r._id || r).toString() === decoded.relayId
+        );
+        if (!relayAllowed) {
+            return apiResponse(res, 403, null, 'Esta porta não faz parte deste convite.');
         }
 
         const result = await toggleRelayInternal({
             relayId: decoded.relayId,
             app: req.app,
-            source: 'qr_public',
+            source: 'qr_public_invite',
         });
 
         apiResponse(res, result.statusCode, result.data || null, result.message);
     } catch (error) {
-        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-            return apiResponse(res, 400, null, 'QR Code inválido ou expirado.');
-        }
         next(error);
     }
 };

@@ -1,34 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import api from '../api/axios';
-import { QrCode, Unlock, AlertTriangle } from 'lucide-react';
+import { QrCode, Info } from 'lucide-react';
 
+/**
+ * Abrir /relay-qr/:token na câmera ou no navegador não aciona a porta.
+ * O mesmo token só é aceito em POST /relays/public/qr-trigger com inviteToken,
+ * feito pelo leitor de QR da página /invite/:token.
+ */
 export default function RelayQrAccessPage() {
-  const { token } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [message, setMessage] = useState('Processando QR...');
-
-  const unlockByQr = async () => {
-    setLoading(true);
-    setSuccess(false);
-    try {
-      const res = await api.post('/relays/public/qr-trigger', { token });
-      setMessage(res.data?.message || 'Porta acionada com sucesso.');
-      setSuccess(true);
-    } catch (err) {
-      setMessage(err.response?.data?.message || 'Não foi possível acionar a porta com este QR.');
-      setSuccess(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    unlockByQr();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
   return (
     <div
       style={{
@@ -61,26 +38,41 @@ export default function RelayQrAccessPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: success ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.2)',
+            background: 'rgba(99,102,241,0.2)',
           }}
         >
-          {success ? <Unlock size={30} /> : loading ? <QrCode size={30} /> : <AlertTriangle size={30} />}
+          <QrCode size={30} />
         </div>
 
         <h1 style={{ marginBottom: 8, fontSize: '1.45rem', fontWeight: 800 }}>
-          {loading ? 'Lendo QR...' : success ? 'Porta Acionada' : 'Falha no QR'}
+          QR da porta
         </h1>
-        <p style={{ color: '#94a3b8', marginBottom: 18 }}>{message}</p>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={unlockByQr}
-          disabled={loading}
-          style={{ marginRight: 8 }}
+        <p style={{ color: '#94a3b8', marginBottom: 16, lineHeight: 1.55 }}>
+          Abrir este link no navegador <strong>não</strong> libera o acesso. Para a porta abrir, o convidado
+          precisa abrir o <strong>link de convite</strong> que recebeu (<code style={{ color: '#c4b5fd' }}>/invite/…</code>)
+          e usar o botão <strong>«Ler QR Code para liberar»</strong> apontando para este mesmo código.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 10,
+            textAlign: 'left',
+            padding: 14,
+            borderRadius: 14,
+            background: 'rgba(99,102,241,0.12)',
+            border: '1px solid rgba(99,102,241,0.25)',
+            color: '#cbd5e1',
+            fontSize: '0.88rem',
+            lineHeight: 1.45,
+          }}
         >
-          Tentar novamente
-        </button>
+          <Info size={20} style={{ flexShrink: 0, marginTop: 2, color: '#a78bfa' }} />
+          <span>
+            Se você é o morador ou recebeu um convite por WhatsApp/e-mail, volte àquele link e escaneie
+            o QR a partir da página do convite.
+          </span>
+        </div>
       </div>
     </div>
   );

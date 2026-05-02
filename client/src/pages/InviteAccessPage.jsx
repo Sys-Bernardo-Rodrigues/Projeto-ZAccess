@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -25,6 +25,16 @@ export default function InviteAccessPage() {
     const [scannerError, setScannerError] = useState('');
     const [scannerLoading, setScannerLoading] = useState(false);
     const scannerRef = useRef(null);
+
+    const closeScannerModal = useCallback(() => {
+        const s = scannerRef.current;
+        if (s?.isScanning) {
+            s.stop().catch(() => {});
+        }
+        setScannerError('');
+        setScannerLoading(false);
+        setShowScannerModal(false);
+    }, []);
     const isProcessingScanRef = useRef(false);
 
     useEffect(() => {
@@ -120,7 +130,10 @@ export default function InviteAccessPage() {
             isProcessingScanRef.current = true;
             setUnlocking(true);
             try {
-                await api.post('/relays/public/qr-trigger', { token: relayQrToken });
+                await api.post('/relays/public/qr-trigger', {
+                    token: relayQrToken,
+                    inviteToken: token,
+                });
                 setUnlocked(true);
                 toast.success('Acesso liberado via QR direto!', { icon: '🔓' });
                 setTimeout(() => {
@@ -171,12 +184,33 @@ export default function InviteAccessPage() {
         if (!showScannerModal) return undefined;
 
         let mounted = true;
-        const scanner = new Html5Qrcode('invite-qr-reader');
-        scannerRef.current = scanner;
+        scannerRef.current = null;
         setScannerError('');
         setScannerLoading(true);
 
-        const startScanner = async () => {
+        const formatScannerError = (error) => {
+            const name = typeof error === 'object' && error ? error.name : '';
+            const msg = typeof error === 'string' ? error : (error && error.message) ? error.message : '';
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                return 'Permissão de câmera negada. Permita o acesso no navegador e tente novamente.';
+            }
+            if (name === 'NotFoundError') {
+                return 'Nenhuma câmera foi encontrada neste aparelho.';
+            }
+            if (name === 'NotReadableError' || name === 'TrackStartError') {
+                return 'A câmera pode estar em uso por outro aplicativo. Feche outros apps e tente de novo.';
+            }
+            if (msg && /not found|element with id/i.test(msg)) {
+                return 'Área do leitor não está pronta. Feche o modal e abra «Ler QR Code» novamente.';
+            }
+            if (msg && /qrbox|dimension|minimum size/i.test(msg)) {
+                return 'Ajuste da janela de leitura falhou. Tente em tela cheia ou outro navegador.';
+            }
+            if (msg) return `Não foi possível iniciar o leitor: ${msg}`;
+            return 'Não foi possível acessar a câmera. Tente recarregar a página ou use outro navegador.';
+        };
+
+        const runScanner = async () => {
             try {
                 const canUseMedia = typeof navigator !== 'undefined'
                     && navigator.mediaDevices
@@ -193,53 +227,90 @@ export default function InviteAccessPage() {
                     return;
                 }
 
-                // Força o navegador a pedir permissão antes de iniciar o scanner.
-                const permissionStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' },
+                await new Promise((r) => {
+                    requestAnimationFrame(() => requestAnimationFrame(r));
                 });
-                permissionStream.getTracks().forEach((track) => track.stop());
+                if (!mounted) return;
+
+                if (!document.getElementById('invite-qr-reader')) {
+                    setScannerError('Área do leitor não encontrada. Feche e abra o modal novamente.');
+                    return;
+                }
+
+                scannerRef.current = new Html5Qrcode('invite-qr-reader');
+
+                const scanConfig = {
+                    fps: 10,
+                    qrbox: { width: 220, height: 220 },
+                };
+
+                const onDecoded = (decodedText) => {
+                    if (isProcessingScanRef.current) return;
+                    closeScannerModal();
+                    handleUnlockByScannedQr(decodedText);
+                };
+                const onScanError = () => {};
+
+                const pickRearCameraId = (cameras) => {
+                    if (!cameras?.length) return null;
+                    const back = cameras.find((c) =>
+                        /back|rear|traseira|environment|ambiente|wide|world/i.test(c.label || '')
+                    );
+                    if (back?.id) return back.id;
+                    if (cameras.length > 1) return cameras[cameras.length - 1].id;
+                    return cameras[0].id;
+                };
+
+                let warmStream = null;
+                try {
+                    warmStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' } },
+                    });
+                } catch {
+                    try {
+                        warmStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    } catch (permErr) {
+                        setScannerError(formatScannerError(permErr));
+                        return;
+                    }
+                }
+                warmStream.getTracks().forEach((t) => t.stop());
+
+                if (!mounted) return;
 
                 const cameras = await Html5Qrcode.getCameras();
                 if (!mounted) return;
-
-                if (!cameras || cameras.length === 0) {
+                if (!cameras?.length) {
                     setScannerError('Nenhuma câmera encontrada no dispositivo.');
                     return;
                 }
 
-                await scanner.start(
-                    cameras[0].id,
-                    { fps: 10, qrbox: { width: 240, height: 240 } },
-                    (decodedText) => {
-                        if (isProcessingScanRef.current) return;
-                        setShowScannerModal(false);
-                        handleUnlockByScannedQr(decodedText);
-                    },
-                    () => {}
-                );
+                const cameraId = pickRearCameraId(cameras);
+                if (!mounted || !scannerRef.current) return;
+                await scannerRef.current.start(cameraId, scanConfig, onDecoded, onScanError);
             } catch (error) {
-                if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
-                    setScannerError('Permissão de câmera negada. Permita o acesso no navegador e tente novamente.');
-                } else {
-                    setScannerError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
-                }
+                setScannerError(formatScannerError(error));
             } finally {
                 if (mounted) setScannerLoading(false);
             }
         };
 
-        startScanner();
+        runScanner();
 
         return () => {
             mounted = false;
-            if (scannerRef.current && scannerRef.current.isScanning) {
-                scannerRef.current.stop().catch(() => {});
-            }
-            scannerRef.current?.clear().catch(() => {});
+            const s = scannerRef.current;
             scannerRef.current = null;
+            if (!s) {
+                setScannerLoading(false);
+                return;
+            }
+            if (s.isScanning) {
+                s.stop().catch(() => {});
+            }
             setScannerLoading(false);
         };
-    }, [showScannerModal]);
+    }, [showScannerModal, closeScannerModal]);
 
     // Slider Logic (unchanged from here)
     const onStart = (e) => {
@@ -368,7 +439,6 @@ export default function InviteAccessPage() {
                 </div>
 
                 <div className="guest-header">
-                    <h2>Olá, {info.guestName}</h2>
                     <p>Você tem permissão para abrir as portas abaixo:</p>
                 </div>
 
@@ -451,11 +521,11 @@ export default function InviteAccessPage() {
             </div>
 
             {showScannerModal && (
-                <div className="qr-modal-overlay" onClick={() => setShowScannerModal(false)}>
+                <div className="qr-modal-overlay" onClick={closeScannerModal}>
                     <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="qr-modal-header">
                             <h3>Ler QR Code</h3>
-                            <button type="button" className="qr-close-btn" onClick={() => setShowScannerModal(false)}>
+                            <button type="button" className="qr-close-btn" onClick={closeScannerModal}>
                                 <X size={18} />
                             </button>
                         </div>
@@ -470,7 +540,7 @@ export default function InviteAccessPage() {
                             onClick={() => {
                                 const value = prompt('Cole aqui o link /invite/:token lido do QR:');
                                 if (!value) return;
-                                setShowScannerModal(false);
+                                closeScannerModal();
                                 handleUnlockByScannedQr(value);
                             }}
                         >
@@ -535,8 +605,7 @@ export default function InviteAccessPage() {
                     display: block;
                 }
 
-                .guest-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
-                .guest-header p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 32px; }
+                .guest-header p { color: #94a3b8; font-size: 0.95rem; margin: 0 0 32px 0; }
 
                 .location-info {
                     background: rgba(255, 255, 255, 0.03);

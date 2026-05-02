@@ -55,7 +55,7 @@ export default function QrUnlockScreen({ navigation }) {
     const token = extractInviteTokenFromQr(data);
     const relayToken = extractRelayQrToken(data);
     if (!token && !relayToken) {
-      setError('QR inválido. Use um QR /invite/:token ou /relay-qr/:token.');
+      setError('QR inválido. Use um QR de convite (/invite/…) ou o QR da porta lido na página do convite.');
       return;
     }
 
@@ -64,10 +64,13 @@ export default function QrUnlockScreen({ navigation }) {
     setError('');
     setNotice('');
     try {
-      if (relayToken) {
-        const res = await ApiService.triggerRelayByQrToken(relayToken);
-        setNotice(res?.message || 'Acesso liberado pelo QR da porta!');
-      } else {
+      if (relayToken && !token) {
+        setError(
+          'QR da porta: abra o link de convite no navegador (/invite/…) e use o leitor de QR lá. Este app não substitui esse fluxo.'
+        );
+        return;
+      }
+      if (token) {
         const info = await ApiService.getPublicInvitationByToken(token);
         const firstGate = info?.gates?.[0];
         if (!firstGate?.id) throw new Error('Nenhuma porta encontrada neste convite.');
@@ -91,7 +94,9 @@ export default function QrUnlockScreen({ navigation }) {
           <View style={[commonStyles.card, { padding: 0, overflow: 'hidden' }]}>
             <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>Leitor de QR</Text>
-              <Text style={commonStyles.subtitle}>Aponte para o QR da porta ou convite para abrir.</Text>
+              <Text style={commonStyles.subtitle}>
+                Aponte para o QR do convite (/invite/…). O QR físico da porta só funciona no leitor da página do convite no navegador.
+              </Text>
             </View>
 
             <View style={{ padding: 14, gap: 10 }}>

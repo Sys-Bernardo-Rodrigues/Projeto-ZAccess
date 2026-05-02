@@ -58,7 +58,4 @@ export const ApiService = {
   async unlockByInvitationToken(token, relayId) {
     return (await api.post(`/api/invitations/access/${token}/unlock`, { relayId })).data;
   },
-  async triggerRelayByQrToken(token) {
-    return (await api.post('/api/relays/public/qr-trigger', { token })).data;
-  },
 };

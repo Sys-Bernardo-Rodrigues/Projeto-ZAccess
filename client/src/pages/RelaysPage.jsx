@@ -598,8 +598,10 @@ export default function RelaysPage() {
                                     style={{ width: 280, maxWidth: '100%', borderRadius: 12, border: '1px solid var(--border-color)' }}
                                 />
                             ) : null}
-                            <p style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                Este QR abre um link público em <strong>/relay-qr/:token</strong> e aciona a porta diretamente.
+                            <p style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                O código contém o link <strong>/relay-qr/…</strong>, mas a porta <strong>só abre</strong> quando o
+                                convidado lê este QR pelo leitor da página <strong>/invite/…</strong> (botão «Ler QR Code para liberar»).
+                                Abrir o link do QR no navegador não aciona o relé.
                             </p>
                         </div>
                         <div className="modal-footer">
