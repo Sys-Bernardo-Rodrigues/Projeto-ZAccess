@@ -5,6 +5,7 @@ const Location = require('../models/Location');
 const ActivityLog = require('../models/ActivityLog');
 const config = require('../config/env');
 const { apiResponse } = require('../utils/helpers');
+const { USER_REGISTER_ROLES } = require('../constants/userRoles');
 const logger = require('../utils/logger');
 
 const signToken = (id) => {
@@ -37,7 +38,18 @@ exports.register = async (req, res, next) => {
             return apiResponse(res, 409, null, 'Email já cadastrado.');
         }
 
-        const user = await User.create({ name, email, password, role });
+        if (role != null && role !== '' && !USER_REGISTER_ROLES.includes(role)) {
+            return apiResponse(res, 400, null, 'Papel inválido para cadastro público.');
+        }
+
+        const resolvedRole =
+            role && USER_REGISTER_ROLES.includes(role) ? role : 'operator';
+
+        if (!password || String(password).trim().length < 6) {
+            return apiResponse(res, 400, null, 'Senha é obrigatória (mínimo 6 caracteres).');
+        }
+
+        const user = await User.create({ name, email, password, role: resolvedRole });
         const token = signToken(user._id);
 
         logger.info(`New user registered: ${email}`);
@@ -64,6 +76,15 @@ exports.login = async (req, res, next) => {
 
         if (!user.active) {
             return apiResponse(res, 403, null, 'Conta desativada.');
+        }
+
+        if (user.role === 'invite_manager' && !user.locationId) {
+            return apiResponse(
+                res,
+                403,
+                null,
+                'Gestor de convites precisa ter um local vinculado. Peça ao administrador para designar o local.'
+            );
         }
 
         const token = signToken(user._id);

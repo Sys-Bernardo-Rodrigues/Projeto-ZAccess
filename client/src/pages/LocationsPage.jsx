@@ -52,6 +52,7 @@ const MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright
 
 export default function LocationsPage() {
     const { user } = useAuth();
+    const isInviteManager = user?.role === 'invite_manager';
     const isGestor = !!user?.locationId;
     const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
     const mapTileUrl = isDarkTheme ? TILE_URL_DARK : TILE_URL_LIGHT;
@@ -288,8 +289,12 @@ export default function LocationsPage() {
         <div style={{ animation: 'fadeIn 0.5s ease-out', height: '100%' }}>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Locais & Mapas</h1>
-                    <p className="page-subtitle">{locations.length} áreas monitoradas no mapa</p>
+                    <h1 className="page-title">{isInviteManager ? 'Meu local' : 'Locais & Mapas'}</h1>
+                    <p className="page-subtitle">
+                        {isInviteManager
+                            ? 'Endereço e mapa do local vinculado à sua conta'
+                            : `${locations.length} áreas monitoradas no mapa`}
+                    </p>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button className="btn btn-secondary" onClick={() => setShowListModal(true)}>
@@ -326,21 +331,23 @@ export default function LocationsPage() {
                                         <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: 'var(--accent-primary)' }}>{loc.name}</h3>
                                         <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem', opacity: 0.7 }}>{loc.address || 'Sem endereço'}</p>
 
-                                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12 }}>
-                                            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: 8, opacity: 0.5 }}>Dispositivos ({loc.devices?.length || 0})</h4>
-                                            {loc.devices && loc.devices.length > 0 ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                    {loc.devices.map(dev => (
-                                                        <div key={dev._id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
-                                                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: dev.status === 'online' ? 'var(--accent-success)' : 'var(--accent-danger)' }}></div>
-                                                            <span>{dev.name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.5 }}>Nenhum dispositivo</p>
-                                            )}
-                                        </div>
+                                        {!isInviteManager && (
+                                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12 }}>
+                                                <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: 8, opacity: 0.5 }}>Dispositivos ({loc.devices?.length || 0})</h4>
+                                                {loc.devices && loc.devices.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                        {loc.devices.map(dev => (
+                                                            <div key={dev._id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
+                                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: dev.status === 'online' ? 'var(--accent-success)' : 'var(--accent-danger)' }}></div>
+                                                                <span>{dev.name}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.5 }}>Nenhum dispositivo</p>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {!isGestor && (
                                             <button
@@ -376,8 +383,8 @@ export default function LocationsPage() {
                                         <tr>
                                             <th>Nome</th>
                                             <th>Endereço</th>
-                                            <th>Dispositivos</th>
-                                            <th>Moradores / Síndicos</th>
+                                            {!isInviteManager && <th>Dispositivos</th>}
+                                            {!isInviteManager && <th>Moradores / Síndicos</th>}
                                             <th style={{ textAlign: 'right' }}>Ações</th>
                                         </tr>
                                     </thead>
@@ -386,18 +393,20 @@ export default function LocationsPage() {
                                             <tr key={loc._id}>
                                                 <td><strong>{loc.name}</strong></td>
                                                 <td>{loc.address || '-'}</td>
-                                                <td>{loc.devices?.length || 0}</td>
-                                                <td>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-sm btn-secondary"
-                                                        onClick={() => openUsersModal(loc)}
-                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                                                    >
-                                                        <Users size={14} />
-                                                        Usuários do local
-                                                    </button>
-                                                </td>
+                                                {!isInviteManager && <td>{loc.devices?.length || 0}</td>}
+                                                {!isInviteManager && (
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-secondary"
+                                                            onClick={() => openUsersModal(loc)}
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                                        >
+                                                            <Users size={14} />
+                                                            Usuários do local
+                                                        </button>
+                                                    </td>
+                                                )}
                                                 <td>
                                                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                                         <button className="btn btn-icon btn-secondary btn-sm" onClick={() => {

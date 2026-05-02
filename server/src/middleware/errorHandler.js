@@ -8,7 +8,7 @@ const errorHandler = (err, req, res, next) => {
         const messages = Object.values(err.errors).map((e) => e.message);
         return res.status(400).json({
             success: false,
-            message: 'Erro de validação',
+            message: messages.length ? messages.join(' ') : 'Erro de validação',
             errors: messages,
             timestamp: new Date().toISOString(),
         });

@@ -4,7 +4,7 @@ const { getAccessReport } = require('../controllers/reportController');
 const { authMiddleware, authorize } = require('../middleware/auth');
 
 router.use(authMiddleware);
-router.use(authorize('admin')); // Only admins can see reports
+router.use(authorize('admin', 'invite_manager'));
 
 router.get('/access', getAccessReport);
 

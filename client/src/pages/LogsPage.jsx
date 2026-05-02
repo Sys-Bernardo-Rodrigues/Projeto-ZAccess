@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { ScrollText, Filter, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ScrollText, Filter, ChevronLeft, ChevronRight, CalendarRange } from 'lucide-react';
 
 const actionLabels = {
     device_connected: 'Conexão Estabelecida',
@@ -17,7 +17,68 @@ const actionLabels = {
     command_sent: 'Comando Enviado',
     command_response: 'Resposta Gateway',
     heartbeat_timeout: 'Timeout de Link',
+    public_access_invitation: 'Acesso via convite',
 };
+
+/** Limites do dia no fuso local do navegador → ISO para a API */
+function localDayToIsoRange(dateStr, endOfDay) {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const dt = endOfDay
+        ? new Date(y, m - 1, d, 23, 59, 59, 999)
+        : new Date(y, m - 1, d, 0, 0, 0, 0);
+    return dt.toISOString();
+}
+
+function getVisiblePageNumbers(current, total, maxVisible = 5) {
+    if (total <= 1) return [1];
+    if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i + 1);
+    let start = Math.max(1, current - Math.floor(maxVisible / 2));
+    let end = start + maxVisible - 1;
+    if (end > total) {
+        end = total;
+        start = Math.max(1, end - maxVisible + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
+function guestNameFromLegacyDescription(description, action) {
+    if (!description || action !== 'public_access_invitation') return null;
+    const m = description.match(/via convite:\s*"([^"]+)"/i);
+    return m ? m[1] : null;
+}
+
+function renderOperatorCell(log) {
+    const u = log.userId;
+    if (u && (u.name || u.email)) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontWeight: 600 }}>{u.name || u.email}</span>
+                {u.name && u.email && String(u.name).trim() !== String(u.email).trim() ? (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{u.email}</span>
+                ) : null}
+            </div>
+        );
+    }
+    const meta = log.metadata || {};
+    let guest =
+        meta.guestName ||
+        meta.invitationGuestName ||
+        guestNameFromLegacyDescription(log.description, log.action);
+    if (guest) {
+        let sub = 'Convite';
+        if (log.action === 'public_access_invitation') sub = 'Convite (link)';
+        else if (meta.viaInviteQr) sub = 'Convite (QR da porta)';
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontWeight: 600 }}>{guest}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{sub}</span>
+            </div>
+        );
+    }
+    return <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Automático</span>;
+}
 
 const TableSkeleton = () => (
     <div className="table-container card">
@@ -49,16 +110,23 @@ export default function LogsPage() {
     const [pagination, setPagination] = useState({});
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
     const [page, setPage] = useState(1);
 
     useEffect(() => {
         loadLogs();
-    }, [page, filter]);
+    }, [page, filter, dateFrom, dateTo]);
 
     const loadLogs = async () => {
+        setLoading(true);
         try {
             const params = { page, limit: 15 };
             if (filter) params.action = filter;
+            const fromIso = localDayToIsoRange(dateFrom, false);
+            const toIso = localDayToIsoRange(dateTo, true);
+            if (fromIso) params.createdFrom = fromIso;
+            if (toIso) params.createdTo = toIso;
             const res = await api.get('/logs', { params });
             setLogs(res.data.data.logs);
             setPagination(res.data.data.pagination);
@@ -130,7 +198,49 @@ export default function LogsPage() {
                         {pagination.total || 0} eventos registrados no histórico
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <CalendarRange size={16} style={{ position: 'absolute', left: 10, color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+                        <input
+                            type="date"
+                            className="form-input"
+                            aria-label="Data inicial"
+                            value={dateFrom}
+                            onChange={(e) => {
+                                setDateFrom(e.target.value);
+                                setPage(1);
+                            }}
+                            style={{ paddingLeft: 36, height: 44, minWidth: 150 }}
+                        />
+                    </div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>até</span>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <CalendarRange size={16} style={{ position: 'absolute', left: 10, color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+                        <input
+                            type="date"
+                            className="form-input"
+                            aria-label="Data final"
+                            value={dateTo}
+                            onChange={(e) => {
+                                setDateTo(e.target.value);
+                                setPage(1);
+                            }}
+                            style={{ paddingLeft: 36, height: 44, minWidth: 150 }}
+                        />
+                    </div>
+                    {(dateFrom || dateTo) && (
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => {
+                                setDateFrom('');
+                                setDateTo('');
+                                setPage(1);
+                            }}
+                        >
+                            Limpar datas
+                        </button>
+                    )}
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <Filter size={16} style={{ position: 'absolute', left: 12, color: 'var(--text-muted)' }} />
                         <select
@@ -140,7 +250,6 @@ export default function LogsPage() {
                             onChange={(e) => {
                                 setFilter(e.target.value);
                                 setPage(1);
-                                setLoading(true);
                             }}
                         >
                             <option value="">Filtrar: Todos os eventos</option>
@@ -203,7 +312,7 @@ export default function LogsPage() {
                                                 )}
                                             </td>
                                             <td style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                                                {log.userId?.name || (log.userId?.email ? log.userId.email : <span style={{ color: 'var(--text-muted)' }}>Automático</span>)}
+                                                {renderOperatorCell(log)}
                                             </td>
                                             <td>{formatDate(log.createdAt)}</td>
                                         </tr>
@@ -215,40 +324,50 @@ export default function LogsPage() {
 
                     {/* Pagination */}
                     {pagination.pages > 1 && (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 32 }}>
-                            <button
-                                className="btn btn-icon btn-secondary"
-                                disabled={page <= 1}
-                                onClick={() => { setPage(page - 1); setLoading(true); }}
-                                style={{ width: 44, height: 44, borderRadius: 12 }}
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 32 }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                Página {pagination.page} de {pagination.pages}
+                                {pagination.total != null && (
+                                    <span style={{ marginLeft: 8 }}>
+                                        · {pagination.total} registro{pagination.total !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-icon btn-secondary"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage((p) => p - 1)}
+                                    style={{ width: 44, height: 44, borderRadius: 12 }}
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
 
-                            <div style={{ display: 'flex', gap: 4 }}>
-                                {Array.from({ length: Math.min(pagination.pages, 5) }).map((_, i) => {
-                                    const pageNum = i + 1; // Simplified for now
-                                    return (
+                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    {getVisiblePageNumbers(page, pagination.pages, 5).map((pageNum) => (
                                         <button
+                                            type="button"
                                             key={pageNum}
-                                            onClick={() => { setPage(pageNum); setLoading(true); }}
+                                            onClick={() => setPage(pageNum)}
                                             className={`btn btn-sm ${page === pageNum ? 'btn-primary' : 'btn-secondary'}`}
                                             style={{ minWidth: 40, height: 40, borderRadius: 10 }}
                                         >
                                             {pageNum}
                                         </button>
-                                    );
-                                })}
-                            </div>
+                                    ))}
+                                </div>
 
-                            <button
-                                className="btn btn-icon btn-secondary"
-                                disabled={page >= pagination.pages}
-                                onClick={() => { setPage(page + 1); setLoading(true); }}
-                                style={{ width: 44, height: 44, borderRadius: 12 }}
-                            >
-                                <ChevronRight size={20} />
-                            </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-icon btn-secondary"
+                                    disabled={page >= pagination.pages}
+                                    onClick={() => setPage((p) => p + 1)}
+                                    style={{ width: 44, height: 44, borderRadius: 12 }}
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </>

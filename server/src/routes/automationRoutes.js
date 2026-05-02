@@ -6,9 +6,10 @@ const {
     updateAutomation,
     deleteAutomation
 } = require('../controllers/automationController');
-const { authMiddleware, authorize } = require('../middleware/auth');
+const { authMiddleware, authorize, rejectInviteManager } = require('../middleware/auth');
 
 router.use(authMiddleware);
+router.use(rejectInviteManager);
 
 router.route('/')
     .get(getAutomations)

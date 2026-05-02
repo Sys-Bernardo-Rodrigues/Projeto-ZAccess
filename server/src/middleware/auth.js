@@ -87,4 +87,18 @@ const authorize = (...roles) => {
     };
 };
 
-module.exports = { authMiddleware, authorize, locationUserAuthMiddleware, requireSindico };
+/** Bloqueia gestor de convites: só pode usar locais, convites, relatórios e leitura de relés (convites). */
+const rejectInviteManager = (req, res, next) => {
+    if (req.user?.role === 'invite_manager') {
+        return apiResponse(res, 403, null, 'Seu perfil só acessa o local, convites e relatórios.');
+    }
+    next();
+};
+
+module.exports = {
+    authMiddleware,
+    authorize,
+    locationUserAuthMiddleware,
+    requireSindico,
+    rejectInviteManager,
+};

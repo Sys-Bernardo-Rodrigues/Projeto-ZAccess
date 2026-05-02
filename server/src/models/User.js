@@ -20,13 +20,11 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            required: [true, 'Senha é obrigatória'],
-            minlength: 6,
+            minlength: [6, 'Senha deve ter no mínimo 6 caracteres'],
             select: false,
         },
         role: {
             type: String,
-            enum: ['admin', 'operator', 'viewer'],
             default: 'operator',
         },
         locationId: {

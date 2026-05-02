@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../hooks/useAuth';
-import brandLogo from '../../svg/ZAccess..svg';
+import brandLogo from '../../svg/ZAccess.svg';
 import {
     Cpu,
     MapPin,

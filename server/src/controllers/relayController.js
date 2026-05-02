@@ -10,7 +10,7 @@ const { pushDeviceConfig } = require('../services/deviceSyncService');
 const { apiResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
-const toggleRelayInternal = async ({ relayId, app, userId, source = 'manual' }) => {
+const toggleRelayInternal = async ({ relayId, app, userId, source = 'manual', logMetadata = {} }) => {
     const relay = await Relay.findById(relayId)
         .populate('deviceId', 'name serialNumber status socketId locationId');
 
@@ -45,12 +45,14 @@ const toggleRelayInternal = async ({ relayId, app, userId, source = 'manual' }) 
     await relay.save();
 
     const action = newState === 'open' ? 'relay_activated' : 'relay_deactivated';
+    const metaKeys = Object.keys(logMetadata || {});
     await ActivityLog.create({
         action,
         description: `Relé "${relay.name}" ${newState === 'open' ? 'ativado' : 'desativado'} via ${source}`,
         deviceId: device._id,
         relayId: relay._id,
         userId: userId || null,
+        ...(metaKeys.length ? { metadata: logMetadata } : {}),
     });
 
     logger.info(`Relay toggled (${source}): ${relay.name} -> ${newState}`);
@@ -320,6 +322,7 @@ exports.triggerRelayByQrPublic = async (req, res, next) => {
             relayId: decoded.relayId,
             app: req.app,
             source: 'qr_public_invite',
+            logMetadata: { guestName: invitation.name, viaInviteQr: true },
         });
 
         apiResponse(res, result.statusCode, result.data || null, result.message);

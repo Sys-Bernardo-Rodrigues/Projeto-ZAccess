@@ -216,17 +216,18 @@ a:hover {
   height: var(--header-height);
   min-height: var(--header-height);
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: 4px 10px;
+  padding: 6px 12px;
   box-sizing: border-box;
   border-bottom: 1px solid var(--border-color);
   overflow: hidden;
 }
 
 .sidebar-logo__img {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
+  min-height: 0;
   width: 100%;
   height: 100%;
   max-width: 100%;
@@ -234,9 +235,6 @@ a:hover {
   object-fit: contain;
   object-position: center;
   display: block;
-  /* Wordmark largo: após viewBox ajustado, escala extra sem distorcer */
-  transform: scale(1.18);
-  transform-origin: center center;
 }
 
 .sidebar-nav {
@@ -1104,12 +1102,15 @@ a:hover {
 }
 
 .auth__logo-img {
-  width: auto;
+  width: min(100%, 380px);
   max-width: 100%;
   height: auto;
-  max-height: min(1440px, 85vh);
+  aspect-ratio: 424 / 83;
+  max-height: min(160px, 28vh);
   object-fit: contain;
+  object-position: center;
   display: block;
+  flex-shrink: 0;
 }
 
 .auth__tagline {
@@ -1237,7 +1238,7 @@ a:hover {
   }
 
   .auth__logo-img {
-    max-height: min(1120px, 75vh);
+    max-height: min(140px, 22vh);
   }
 
   .auth__tagline {

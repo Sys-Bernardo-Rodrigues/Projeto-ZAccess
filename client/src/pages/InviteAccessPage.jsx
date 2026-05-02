@@ -4,7 +4,7 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Shield, Lock, Unlock, Clock, MapPin, ChevronRight, Camera, QrCode, X } from 'lucide-react';
-import brandLogo from '../../svg/ZAccess..svg';
+import brandLogo from '../../svg/ZAccess.svg';
 
 export default function InviteAccessPage() {
     const { token } = useParams();
@@ -432,8 +432,8 @@ export default function InviteAccessPage() {
                         className="brand-logo-img"
                         src={brandLogo}
                         alt="ZAccess"
-                        width={436}
-                        height={144}
+                        width={424}
+                        height={83}
                         decoding="async"
                     />
                 </div>

@@ -5,17 +5,19 @@ const logger = require('../utils/logger');
 // GET /api/locations
 exports.getLocations = async (req, res, next) => {
     try {
+        const withDevices = req.user.role !== 'invite_manager';
         if (req.allowedLocationId) {
-            const location = await Location.findOne({ _id: req.allowedLocationId, active: true })
-                .populate('devices');
+            let q = Location.findOne({ _id: req.allowedLocationId, active: true });
+            if (withDevices) q = q.populate('devices');
+            const location = await q;
             if (!location) {
                 return apiResponse(res, 403, null, 'Acesso ao local não permitido.');
             }
             return apiResponse(res, 200, { locations: [location], count: 1 });
         }
-        const locations = await Location.find({ active: true })
-            .populate('devices')
-            .sort({ createdAt: -1 });
+        let q = Location.find({ active: true }).sort({ createdAt: -1 });
+        if (withDevices) q = q.populate('devices');
+        const locations = await q;
         apiResponse(res, 200, { locations, count: locations.length });
     } catch (error) {
         next(error);
@@ -28,7 +30,11 @@ exports.getLocation = async (req, res, next) => {
         if (req.allowedLocationId && req.params.id !== req.allowedLocationId.toString()) {
             return apiResponse(res, 403, null, 'Acesso a este local não permitido.');
         }
-        const location = await Location.findById(req.params.id).populate('devices');
+        let q = Location.findById(req.params.id);
+        if (req.user.role !== 'invite_manager') {
+            q = q.populate('devices');
+        }
+        const location = await q;
         if (!location) {
             return apiResponse(res, 404, null, 'Local não encontrado.');
         }

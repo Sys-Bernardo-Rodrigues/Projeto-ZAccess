@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import brandLogo from '../../../svg/ZAccess..svg';
+import brandLogo from '../../../svg/ZAccess.svg';
 import {
     LayoutDashboard,
     Cpu,
@@ -51,6 +51,7 @@ const adminDisabledItems = [
 export default function Sidebar() {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const isInviteManager = user?.role === 'invite_manager';
 
     const initials = user?.name
         ? user.name
@@ -90,39 +91,54 @@ export default function Sidebar() {
                     className="sidebar-logo__img"
                     src={brandLogo}
                     alt="ZAccess"
-                    width={280}
-                    height={72}
                     decoding="async"
                 />
             </div>
 
             <nav className="sidebar-nav">
-                <div className="sidebar-section">
-                    <span className="sidebar-section-title">Home</span>
-                    {getMainNavItems(!!user?.locationId).map(renderLink)}
-                </div>
-
-                {(user?.role === 'admin' || user?.role === 'operator') && (
+                {isInviteManager ? (
                     <div className="sidebar-section">
-                        <span className="sidebar-section-title">Histórico</span>
-                        {historyNavItems.map(renderLink)}
+                        <span className="sidebar-section-title">Gestão de convites</span>
+                        {getMainNavItems(!!user?.locationId)
+                            .filter((item) => ['/locations', '/invites'].includes(item.path))
+                            .map(renderLink)}
+                        <NavLink to="/reports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <FileText size={20} /> Relatórios
+                        </NavLink>
+                        <NavLink to="/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <Settings size={20} /> Configurações
+                        </NavLink>
                     </div>
-                )}
+                ) : (
+                    <>
+                        <div className="sidebar-section">
+                            <span className="sidebar-section-title">Home</span>
+                            {getMainNavItems(!!user?.locationId).map(renderLink)}
+                        </div>
 
-                <div className="sidebar-section">
-                    <span className="sidebar-section-title">Hardware</span>
-                    {hardwareNavItems.map(renderLink)}
-                    <NavLink to="/schedules" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                        <Calendar size={20} /> Agendamentos
-                    </NavLink>
-                </div>
+                        {(user?.role === 'admin' || user?.role === 'operator') && (
+                            <div className="sidebar-section">
+                                <span className="sidebar-section-title">Histórico</span>
+                                {historyNavItems.map(renderLink)}
+                            </div>
+                        )}
 
-                {user?.role === 'admin' && !user?.locationId && (
-                    <div className="sidebar-section">
-                        <span className="sidebar-section-title">Administração</span>
-                        {adminNavItems.map(renderLink)}
-                        {adminDisabledItems.map(renderDisabledItem)}
-                    </div>
+                        <div className="sidebar-section">
+                            <span className="sidebar-section-title">Hardware</span>
+                            {hardwareNavItems.map(renderLink)}
+                            <NavLink to="/schedules" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                                <Calendar size={20} /> Agendamentos
+                            </NavLink>
+                        </div>
+
+                        {user?.role === 'admin' && !user?.locationId && (
+                            <div className="sidebar-section">
+                                <span className="sidebar-section-title">Administração</span>
+                                {adminNavItems.map(renderLink)}
+                                {adminDisabledItems.map(renderDisabledItem)}
+                            </div>
+                        )}
+                    </>
                 )}
             </nav>
 

@@ -16,13 +16,40 @@ import LogsPage from './pages/LogsPage';
 import AutomationsPage from './pages/AutomationsPage';
 import EventsPage from './pages/EventsPage';
 import UsersPage from './pages/UsersPage';
-import MonitoringPage from './pages/MonitoringPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
 import InvitationsPage from './pages/InvitationsPage';
 import InviteAccessPage from './pages/InviteAccessPage';
 import RelayQrAccessPage from './pages/RelayQrAccessPage';
 import AlertListener from './components/Alerts/AlertListener';
+
+function DashboardOrRedirect() {
+  const { user } = useAuth();
+  if (user?.role === 'invite_manager') {
+    return <Navigate to="/invites" replace />;
+  }
+  return <DashboardPage />;
+}
+
+function NonInviteManagerRoute({ children }) {
+  const { user } = useAuth();
+  if (user?.role === 'invite_manager') {
+    return <Navigate to="/invites" replace />;
+  }
+  return children;
+}
+
+function AppLayoutWithOptionalSocket() {
+  const { user } = useAuth();
+  if (user?.role === 'invite_manager') {
+    return <AppLayout />;
+  }
+  return (
+    <SocketProvider>
+      <AppLayout />
+    </SocketProvider>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -82,25 +109,22 @@ function AppRoutes() {
       <Route
         element={
           <ProtectedRoute>
-            <SocketProvider>
-              <AppLayout />
-            </SocketProvider>
+            <AppLayoutWithOptionalSocket />
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/devices" element={<DevicesPage />} />
+        <Route path="/" element={<DashboardOrRedirect />} />
+        <Route path="/devices" element={<NonInviteManagerRoute><DevicesPage /></NonInviteManagerRoute>} />
         <Route path="/locations" element={<LocationsPage />} />
-        <Route path="/relays" element={<RelaysPage />} />
-        <Route path="/inputs" element={<InputsPage />} />
-        <Route path="/schedules" element={<SchedulesPage />} />
-        <Route path="/automations" element={<AutomationsPage />} />
-        <Route path="/eventos" element={<EventsPage />} />
-        <Route path="/eventos" element={<Navigate to="/" replace />} />
-        <Route path="/users" element={<UsersPage />} />
+        <Route path="/relays" element={<NonInviteManagerRoute><RelaysPage /></NonInviteManagerRoute>} />
+        <Route path="/inputs" element={<NonInviteManagerRoute><InputsPage /></NonInviteManagerRoute>} />
+        <Route path="/schedules" element={<NonInviteManagerRoute><SchedulesPage /></NonInviteManagerRoute>} />
+        <Route path="/automations" element={<NonInviteManagerRoute><AutomationsPage /></NonInviteManagerRoute>} />
+        <Route path="/eventos" element={<NonInviteManagerRoute><EventsPage /></NonInviteManagerRoute>} />
+        <Route path="/users" element={<NonInviteManagerRoute><UsersPage /></NonInviteManagerRoute>} />
         <Route path="/monitoring" element={<Navigate to="/" replace />} />
         <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/logs" element={<LogsPage />} />
+        <Route path="/logs" element={<NonInviteManagerRoute><LogsPage /></NonInviteManagerRoute>} />
         <Route path="/invites" element={<InvitationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const deviceController = require('../controllers/deviceController');
-const { authMiddleware, authorize } = require('../middleware/auth');
+const { authMiddleware, authorize, rejectInviteManager } = require('../middleware/auth');
 
 router.use(authMiddleware);
+router.use(rejectInviteManager);
 
 router.get('/', deviceController.getDevices);
 router.get('/:id', deviceController.getDevice);

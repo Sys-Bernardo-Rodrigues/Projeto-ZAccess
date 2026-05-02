@@ -13,6 +13,7 @@ import {
     Shield,
     UserCircle,
     Eye,
+    UserPlus,
 } from 'lucide-react';
 
 export default function UsersPage() {
@@ -77,6 +78,10 @@ export default function UsersPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (form.role === 'invite_manager' && !form.locationId) {
+            toast.error('Gestor de convites deve ter um local designado.');
+            return;
+        }
         try {
             const payload = { ...form };
             if (!payload.locationId) payload.locationId = null;
@@ -91,7 +96,12 @@ export default function UsersPage() {
             setShowModal(false);
             loadUsers();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Erro ao salvar usuário');
+            const d = err.response?.data;
+            const detail =
+                (Array.isArray(d?.errors) && d.errors.length ? d.errors.join(' ') : null) ||
+                d?.message ||
+                'Erro ao salvar usuário';
+            toast.error(detail);
         }
     };
 
@@ -114,6 +124,8 @@ export default function UsersPage() {
                 return <span className="badge badge-primary"><UserCircle size={12} /> Operador</span>;
             case 'viewer':
                 return <span className="badge badge-secondary"><Eye size={12} /> Visualizador</span>;
+            case 'invite_manager':
+                return <span className="badge badge-primary"><UserPlus size={12} /> Gestor convites</span>;
             default:
                 return role;
         }
@@ -261,6 +273,7 @@ export default function UsersPage() {
                                             <option value="admin">Administrador (Total)</option>
                                             <option value="operator">Operador (Executa comandos)</option>
                                             <option value="viewer">Visualizador (Apenas vê)</option>
+                                            <option value="invite_manager">Gestor de convites (local, convites e relatórios)</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -276,19 +289,24 @@ export default function UsersPage() {
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Local designado (gestor)</label>
+                                    <label className="form-label">
+                                        Local designado {form.role === 'invite_manager' ? '(obrigatório)' : '(gestor)'}
+                                    </label>
                                     <select
                                         className="form-select"
                                         value={form.locationId}
                                         onChange={(e) => setForm({ ...form, locationId: e.target.value })}
+                                        required={form.role === 'invite_manager'}
                                     >
-                                        <option value="">Todos os locais (acesso completo)</option>
+                                        <option value="">{form.role === 'invite_manager' ? 'Selecione o local' : 'Todos os locais (acesso completo)'}</option>
                                         {locations.map((loc) => (
                                             <option key={loc._id} value={loc._id}>{loc.name}</option>
                                         ))}
                                     </select>
                                     <p style={{ marginTop: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        Se preenchido, o usuário terá acesso apenas a este local e poderá cadastrar moradores e criar convites somente para ele.
+                                        {form.role === 'invite_manager'
+                                            ? 'Este perfil acessa somente esse local, a página de convites e relatórios de acesso.'
+                                            : 'Se preenchido, o usuário terá acesso apenas a este local e poderá cadastrar moradores e criar convites somente para ele.'}
                                     </p>
                                 </div>
                             </div>

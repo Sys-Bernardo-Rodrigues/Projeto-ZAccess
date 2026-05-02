@@ -195,7 +195,7 @@ exports.unlockByInvitation = async (req, res, next) => {
             description: `Acesso público via convite: "${invitation.name}" abriu "${relay.name}"`,
             relayId: relay._id,
             deviceId: device._id,
-            metadata: { token: invitation.token }
+            metadata: { token: invitation.token, guestName: invitation.name },
         });
 
         logger.info(`Public access via invitation: ${invitation.name} unlocked ${relay.name}`);

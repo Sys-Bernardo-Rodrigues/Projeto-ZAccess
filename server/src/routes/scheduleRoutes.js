@@ -6,9 +6,10 @@ const {
     updateSchedule,
     deleteSchedule,
 } = require('../controllers/scheduleController');
-const { authMiddleware, authorize } = require('../middleware/auth');
+const { authMiddleware, authorize, rejectInviteManager } = require('../middleware/auth');
 
 router.use(authMiddleware);
+router.use(rejectInviteManager);
 
 router
     .route('/')

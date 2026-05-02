@@ -24,6 +24,7 @@ export default function Header() {
     const navigate = useNavigate();
     const { deviceEvents, connected } = useSocket();
     const { user } = useAuth();
+    const isInviteManager = user?.role === 'invite_manager';
     const pageInfo = pageTitles[location.pathname] || { title: 'ZAccess', subtitle: 'Controle de acessos IoT' };
 
     return (
@@ -41,10 +42,39 @@ export default function Header() {
             </div>
 
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-input)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-color)', fontSize: '0.75rem', fontWeight: 700, color: connected ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? 'var(--accent-success)' : 'var(--accent-danger)', boxShadow: connected ? '0 0 10px var(--accent-success)' : 'none' }} />
-                    {connected ? 'CONNECTED' : 'DISCONNECTED'}
-                </div>
+                {isInviteManager ? (
+                    <div
+                        title="Este perfil não usa o painel em tempo real (sem WebSocket): só convites, local e relatórios."
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: 'var(--bg-input)',
+                            padding: '6px 12px',
+                            borderRadius: 20,
+                            border: '1px solid var(--border-color)',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                background: 'var(--text-muted)',
+                                opacity: 0.45,
+                            }}
+                        />
+                        Gestão de convites
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-input)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-color)', fontSize: '0.75rem', fontWeight: 700, color: connected ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? 'var(--accent-success)' : 'var(--accent-danger)', boxShadow: connected ? '0 0 10px var(--accent-success)' : 'none' }} />
+                        {connected ? 'CONNECTED' : 'DISCONNECTED'}
+                    </div>
+                )}
 
                 <div style={{ width: 1, height: 24, background: 'var(--border-color)', margin: '0 8px' }} />
 

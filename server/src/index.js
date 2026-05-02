@@ -14,6 +14,7 @@ const { connectRedis } = require('./config/redis');
 const logger = require('./utils/logger');
 const { register, metricsMiddleware } = require('./metrics');
 const errorHandler = require('./middleware/errorHandler');
+const { authMiddleware, authorize } = require('./middleware/auth');
 const { apiLimiter, docsLoginLimiter } = require('./middleware/rateLimiter');
 const openapiSpec = require('./docs/openapi');
 
@@ -24,6 +25,7 @@ const locationRoutes = require('./routes/locations');
 const locationUserRoutes = require('./routes/locationUsers');
 const relayRoutes = require('./routes/relays');
 const logRoutes = require('./routes/logs');
+const logController = require('./controllers/logController');
 const userRoutes = require('./routes/users');
 const inputRoutes = require('./routes/inputRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
@@ -265,6 +267,14 @@ app.use('/api/locations/:locationId/users', apiLimiter, locationUserRoutes);
 app.use('/api/locations', apiLimiter, locationRoutes);
 app.use('/api/relays', apiLimiter, relayRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
+// Purge fora do router de /logs: garante match (admin-only, sem rejectInviteManager).
+app.post(
+    '/api/logs/purge',
+    apiLimiter,
+    authMiddleware,
+    authorize('admin'),
+    logController.purgeLogsByDateRange
+);
 app.use('/api/logs', apiLimiter, logRoutes);
 app.use('/api/inputs', apiLimiter, inputRoutes);
 app.use('/api/schedules', apiLimiter, scheduleRoutes);

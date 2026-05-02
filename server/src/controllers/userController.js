@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
-const { apiResponse } = require('../utils/helpers');
+const { apiResponse, sanitizeObject } = require('../utils/helpers');
+const { USER_PANEL_ROLES, isValidUserPanelRole } = require('../constants/userRoles');
 const logger = require('../utils/logger');
 
 // @desc    Get all users
@@ -42,7 +43,31 @@ exports.createUser = async (req, res, next) => {
             return apiResponse(res, 409, null, 'Email já cadastrado.');
         }
 
-        const user = await User.create({ name, email, password, role, locationId: locationId || undefined });
+        const resolvedRole = role || 'operator';
+        if (!isValidUserPanelRole(resolvedRole)) {
+            return apiResponse(
+                res,
+                400,
+                null,
+                `Papel inválido. Use um dos seguintes: ${USER_PANEL_ROLES.join(', ')}.`
+            );
+        }
+
+        if (resolvedRole === 'invite_manager' && !locationId) {
+            return apiResponse(res, 400, null, 'Gestor de convites deve ter um local designado.');
+        }
+
+        if (!password || String(password).trim().length < 6) {
+            return apiResponse(res, 400, null, 'Senha é obrigatória (mínimo 6 caracteres).');
+        }
+
+        const user = await User.create({
+            name,
+            email,
+            password,
+            role: resolvedRole,
+            locationId: locationId && String(locationId).trim() ? locationId : undefined,
+        });
 
         await ActivityLog.create({
             action: 'device_registered', // Reusing for user registration log
@@ -68,16 +93,41 @@ exports.updateUser = async (req, res, next) => {
             return apiResponse(res, 404, null, 'Usuário não encontrado.');
         }
 
+        const nextRole = role !== undefined ? role : user.role;
+        if (!isValidUserPanelRole(nextRole)) {
+            return apiResponse(
+                res,
+                400,
+                null,
+                `Papel inválido. Use um dos seguintes: ${USER_PANEL_ROLES.join(', ')}.`
+            );
+        }
+
+        const nextLocationId = locationId !== undefined ? (locationId === '' ? null : locationId) : user.locationId;
+
+        if (nextRole === 'invite_manager' && !nextLocationId) {
+            return apiResponse(res, 400, null, 'Gestor de convites deve ter um local designado.');
+        }
+
         // Prevent admin from deactivating themselves or changing their own role (optional but safe)
         if (user._id.toString() === req.user._id.toString()) {
             if (active === false) return apiResponse(res, 400, null, 'Você não pode desativar sua própria conta.');
         }
 
-        user = await User.findByIdAndUpdate(
-            req.params.id,
-            { name, email, role, active, locationId: locationId === '' ? null : locationId },
-            { new: true, runValidators: true }
-        );
+        const updatePayload = sanitizeObject({
+            name,
+            email,
+            role,
+            active,
+        });
+        if (locationId !== undefined) {
+            updatePayload.locationId = locationId === '' || locationId === null ? null : locationId;
+        }
+
+        user = await User.findByIdAndUpdate(req.params.id, updatePayload, {
+            new: true,
+            runValidators: true,
+        });
 
         await ActivityLog.create({
             action: 'device_updated',

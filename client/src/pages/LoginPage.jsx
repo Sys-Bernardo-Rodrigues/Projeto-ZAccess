@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
-import brandLogo from '../../svg/ZAccess..svg';
+import brandLogo from '../../svg/ZAccess.svg';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -171,9 +171,9 @@ export default function LoginPage() {
                     <img
                         className="auth__logo-img"
                         src={brandLogo}
-                        alt=""
-                        width={280}
-                        height={72}
+                        alt="ZAccess"
+                        width={424}
+                        height={83}
                         decoding="async"
                     />
                 </div>
