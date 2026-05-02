@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../services/auth';
 import { useAppTheme } from '../styles';
+import BrandLogo from '../components/BrandLogo';
 
 export default function LoginScreen({ onLoggedIn }) {
   const { commonStyles, colors } = useAppTheme();
@@ -68,28 +68,10 @@ export default function LoginScreen({ onLoggedIn }) {
     <SafeAreaView style={commonStyles.screen}>
       <ScrollView contentContainerStyle={[commonStyles.container, { flexGrow: 1, justifyContent: 'center', paddingBottom: 34 }]}>
         <View style={{ alignItems: 'center', marginBottom: 22 }}>
-          <LinearGradient
-            colors={['#8b5cf6', '#6366f1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              width: 78,
-              height: 78,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 18,
-              shadowColor: '#8b5cf6',
-              shadowOpacity: 0.45,
-              shadowRadius: 16,
-              shadowOffset: { width: 0, height: 10 },
-              elevation: 8,
-            }}
-          >
-            <Ionicons name="flash" size={36} color={colors.white} />
-          </LinearGradient>
-          <Text style={commonStyles.title}>ZAccess</Text>
-          <Text style={[commonStyles.subtitle, { marginTop: 4 }]}>Acesso inteligente para moradores e síndicos</Text>
+          <BrandLogo width={280} height={92} style={{ marginBottom: 14 }} />
+          <Text style={[commonStyles.subtitle, { marginTop: 0, textAlign: 'center' }]}>
+            Acesso inteligente para moradores e síndicos
+          </Text>
         </View>
 
         <View style={commonStyles.card}>

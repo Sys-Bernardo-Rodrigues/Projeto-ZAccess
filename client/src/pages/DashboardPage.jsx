@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../hooks/useAuth';
+import brandLogo from '../../svg/ZAccess..svg';
 import {
     Cpu,
     MapPin,
@@ -152,8 +153,8 @@ export default function DashboardPage() {
                         </span>
                     </div>
                 </div>
-                <div className="dashboard-hero-decoration">
-                    <Zap size={140} strokeWidth={1.5} />
+                <div className="dashboard-hero-decoration" aria-hidden>
+                    <img className="dashboard-hero-logo" src={brandLogo} alt="" />
                 </div>
             </section>
 
@@ -341,7 +342,16 @@ export default function DashboardPage() {
                 }
                 .dashboard-badge.connected { background: rgba(255,255,255,0.3); }
                 .dashboard-hero-decoration {
-                    position: absolute; right: 20px; bottom: -20px; opacity: 0.15; pointer-events: none;
+                    position: absolute; right: 12px; bottom: 4px; opacity: 1; pointer-events: none;
+                }
+                .dashboard-hero-logo {
+                    width: min(220px, 38vw);
+                    height: auto;
+                    max-height: 88px;
+                    object-fit: contain;
+                    display: block;
+                    opacity: 0.22;
+                    filter: brightness(0) invert(1);
                 }
                 .dashboard-stats {
                     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;

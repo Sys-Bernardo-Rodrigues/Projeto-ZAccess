@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
+import brandLogo from '../../svg/ZAccess..svg';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -30,9 +31,15 @@ export default function LoginPage() {
         <div className="auth">
             <div className="auth__brand">
                 <div className="auth__logo" aria-hidden>
-                    <span className="auth__logo-text">Z</span>
+                    <img
+                        className="auth__logo-img"
+                        src={brandLogo}
+                        alt=""
+                        width={280}
+                        height={72}
+                        decoding="async"
+                    />
                 </div>
-                <h1 className="auth__title">Zaccess</h1>
                 <p className="auth__tagline">Controle de acessos e dispositivos IoT</p>
             </div>
 

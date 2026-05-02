@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Shield, Moon, SunMedium } from 'lucide-react';
+import { Moon, SunMedium } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import brandLogo from '../../svg/ZAccess..svg';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -27,19 +28,19 @@ export default function SettingsPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div
+            <img
+              src={brandLogo}
+              alt="ZAccess"
+              width={436}
+              height={144}
               style={{
-                width: 40,
+                width: 'auto',
                 height: 40,
-                borderRadius: 12,
-                background: 'rgba(129, 140, 248, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                maxWidth: 180,
+                objectFit: 'contain',
+                display: 'block',
               }}
-            >
-              <Shield size={20} />
-            </div>
+            />
             <div>
               <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Configurações do sistema</h2>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>

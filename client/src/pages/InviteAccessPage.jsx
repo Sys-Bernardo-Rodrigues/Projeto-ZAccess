@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Shield, Lock, Unlock, Clock, MapPin, ChevronRight, Zap, Camera, QrCode, X } from 'lucide-react';
+import { Shield, Lock, Unlock, Clock, MapPin, ChevronRight, Camera, QrCode, X } from 'lucide-react';
+import brandLogo from '../../svg/ZAccess..svg';
 
 export default function InviteAccessPage() {
     const { token } = useParams();
@@ -356,10 +357,14 @@ export default function InviteAccessPage() {
 
             <div className="access-card">
                 <div className="brand">
-                    <div className="brand-icon">
-                        <Zap size={32} fill="white" color="white" />
-                    </div>
-                    <h1>ZAccess<span>.</span></h1>
+                    <img
+                        className="brand-logo-img"
+                        src={brandLogo}
+                        alt="ZAccess"
+                        width={436}
+                        height={144}
+                        decoding="async"
+                    />
                 </div>
 
                 <div className="guest-header">
@@ -517,21 +522,18 @@ export default function InviteAccessPage() {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 12px;
+                    justify-content: center;
                     margin-bottom: 32px;
                 }
-                .brand-icon {
-                    width: 64px;
-                    height: 64px;
-                    background: linear-gradient(135deg, #a855f7, #6366f1);
-                    border-radius: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 10px 20px rgba(168, 85, 247, 0.4);
+                .brand-logo-img {
+                    width: 100%;
+                    max-width: min(100%, 340px);
+                    height: auto;
+                    max-height: 96px;
+                    object-fit: contain;
+                    object-position: center;
+                    display: block;
                 }
-                .brand h1 { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; }
-                .brand h1 span { color: #a855f7; }
 
                 .guest-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
                 .guest-header p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 32px; }

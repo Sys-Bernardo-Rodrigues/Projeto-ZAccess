@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useSocket } from '../../hooks/useSocket';
+import brandLogo from '../../../svg/ZAccess..svg';
 import {
     LayoutDashboard,
     Cpu,
@@ -50,7 +50,6 @@ const adminDisabledItems = [
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
-    const { connected } = useSocket();
     const location = useLocation();
 
     const initials = user?.name
@@ -86,55 +85,15 @@ export default function Sidebar() {
 
     return (
         <aside className="sidebar">
-            <div className="sidebar-logo" style={{ gap: 16 }}>
-                <div style={{
-                    width: 44,
-                    height: 44,
-                    background: 'var(--gradient-primary)',
-                    borderRadius: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.5), inset 0 0 10px rgba(255,255,255,0.2)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    flexShrink: 0
-                }}>
-                    <Zap size={24} color="white" strokeWidth={2.5} fill="white" />
-                    <div style={{ position: 'absolute', top: -10, left: -10, width: 30, height: 30, background: 'rgba(255,255,255,0.2)', filter: 'blur(10px)', borderRadius: '50%' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <h1 style={{
-                        fontSize: '1.45rem',
-                        fontWeight: 900,
-                        letterSpacing: -1.2,
-                        color: 'var(--sidebar-logo-color)',
-                        lineHeight: 1.1,
-                        textShadow: '0 1px 2px rgba(0,0,0,0.06)'
-                    }}>
-                        ZAccess<span style={{ color: 'var(--accent-primary)' }}>.</span>
-                    </h1>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        background: 'var(--sidebar-badge-bg)',
-                        padding: '2px 8px',
-                        borderRadius: 20,
-                        width: 'fit-content'
-                    }}>
-                        <div className={`status-dot-pulse ${connected ? 'online' : 'offline'}`} />
-                        <span style={{
-                            fontSize: '0.6rem',
-                            fontWeight: 800,
-                            letterSpacing: 0.5,
-                            color: connected ? 'var(--accent-success)' : 'var(--accent-danger)',
-                            textTransform: 'uppercase'
-                        }}>
-                            {connected ? 'Cloud Active' : 'Offline'}
-                        </span>
-                    </div>
-                </div>
+            <div className="sidebar-logo">
+                <img
+                    className="sidebar-logo__img"
+                    src={brandLogo}
+                    alt="ZAccess"
+                    width={280}
+                    height={72}
+                    decoding="async"
+                />
             </div>
 
             <nav className="sidebar-nav">
@@ -229,31 +188,6 @@ export default function Sidebar() {
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
-                }
-                .status-dot-pulse {
-                    width: 6px;
-                    height: 6px;
-                    border-radius: 50%;
-                    position: relative;
-                }
-                .status-dot-pulse.online {
-                    background: var(--accent-success);
-                    box-shadow: 0 0 8px var(--accent-success);
-                }
-                .status-dot-pulse.offline {
-                    background: var(--accent-danger);
-                }
-                .status-dot-pulse.online::after {
-                    content: '';
-                    position: absolute;
-                    inset: -2px;
-                    border-radius: 50%;
-                    border: 1px solid var(--accent-success);
-                    animation: pulse 2s infinite;
-                }
-                @keyframes pulse {
-                    0% { transform: scale(1); opacity: 1; }
-                    100% { transform: scale(2.5); opacity: 0; }
                 }
                 .sidebar-link--disabled {
                     cursor: default;
