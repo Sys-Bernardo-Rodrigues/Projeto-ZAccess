@@ -997,6 +997,9 @@ a:hover {
 }
 
 .auth__brand {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1006,7 +1009,92 @@ a:hover {
   border-right: 1px solid var(--border-color);
 }
 
+/* Fundo animado: linhas + padrão SVG em loop (login) */
+.auth__brand::before,
+.auth__brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth__brand::before {
+  opacity: 0.4;
+  background-image: repeating-linear-gradient(
+    118deg,
+    transparent,
+    transparent 14px,
+    rgba(139, 92, 246, 0.12) 14px,
+    rgba(139, 92, 246, 0.12) 15px
+  );
+  background-size: 44px 44px;
+  animation: authStripeDriftA 11s linear infinite;
+}
+
+.auth__brand::after {
+  opacity: 0.35;
+  background-image: repeating-linear-gradient(
+    32deg,
+    transparent,
+    transparent 18px,
+    rgba(99, 102, 241, 0.1) 18px,
+    rgba(99, 102, 241, 0.1) 19px
+  );
+  background-size: 60px 60px;
+  animation: authStripeDriftB 17s linear infinite reverse;
+}
+
+.auth__brand-flow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.auth__brand-flow__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.auth__brand-flow__g {
+  animation: authVectorPan 12s linear infinite;
+}
+
+@keyframes authStripeDriftA {
+  to {
+    background-position: 44px 44px;
+  }
+}
+
+@keyframes authStripeDriftB {
+  to {
+    background-position: -60px 60px;
+  }
+}
+
+@keyframes authVectorPan {
+  to {
+    transform: translate(208px, 208px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth__brand::before,
+  .auth__brand::after {
+    animation: none;
+  }
+
+  .auth__brand-flow__g {
+    animation: none;
+  }
+}
+
 .auth__logo {
+  position: relative;
+  z-index: 1;
   width: auto;
   max-width: 100%;
   display: flex;
@@ -1025,6 +1113,8 @@ a:hover {
 }
 
 .auth__tagline {
+  position: relative;
+  z-index: 1;
   font-size: 0.95rem;
   color: var(--text-muted);
   font-weight: 500;
